@@ -39,7 +39,7 @@ Thirdparty/g2o/build/*
 # large files
 Vocabulary/ORBvoc.txt
 Vocabulary/ORBvoc.bin
-tools/bin_vocabulary
+tools/bin_vocabulary/*
 
 #vs code files
 .vscode/*
