@@ -35,3 +35,6 @@
 build/*
 Thirdparty/DBoW2/build/*
 Thirdparty/g2o/build/*
+
+# large files
+Vocabulary/ORBvoc.txt
