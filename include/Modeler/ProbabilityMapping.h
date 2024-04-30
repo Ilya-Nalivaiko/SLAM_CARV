@@ -32,7 +32,7 @@
 #include <stdio.h>
 #include <vector>
 #include <numeric>
-#include <Eigen/Core>
+#include <eigen3/Eigen/Core>
 #include <mutex>
 
 #define covisN 7
