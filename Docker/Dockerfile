@@ -30,7 +30,8 @@ RUN apt-get update && apt-get install -y \
 		unzip \
 		curl \
 		software-properties-common \
-        libcgal-dev
+        libcgal-dev \ 
+        libcgal-qt5-dev
 		
 
 # ------------------------------------------------------------------------------------------                                 
