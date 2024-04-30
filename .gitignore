@@ -35,6 +35,7 @@
 build/*
 Thirdparty/DBoW2/build/*
 Thirdparty/g2o/build/*
+Examples/ROS/ORB_CARV_Pub/build/*
 
 # large files
 Vocabulary/*
