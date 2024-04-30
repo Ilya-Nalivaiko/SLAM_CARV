@@ -128,10 +128,11 @@ RUN mkdir -p ~/eigen3 && \
           cmake ../ && \
           make install
 
-
+# ------------------------------------------------------------------------------------------
+# [5] Install ROS
 
 # ------------------------------------------------------------------------------------------
-# [5] Orb-slam3
+# [6] Install SLAM CARV
 
 RUN apt-get update && apt-get install -y \
 	libpcap-dev \
@@ -142,8 +143,8 @@ RUN apt-get update && apt-get install -y \
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
 RUN mkdir -p ~/orbslam3 && \
 	cd ~/orbslam3 && \
-	git clone https://github.com/IslamAAli/ORB_SLAM3.git && \
-	cd ORB_SLAM3 && \
+	git clone https://github.com/IslamAAli/SLAM_CARV.git && \
+	cd SLAM_CARV && \
 	chmod +x build.sh && \
 	./build.sh   
 
