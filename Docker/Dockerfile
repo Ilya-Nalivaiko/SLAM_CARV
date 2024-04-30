@@ -29,7 +29,8 @@ RUN apt-get update && apt-get install -y \
 		git \
 		unzip \
 		curl \
-		software-properties-common
+		software-properties-common \
+        libcgal-dev
 		
 
 # ------------------------------------------------------------------------------------------                                 
