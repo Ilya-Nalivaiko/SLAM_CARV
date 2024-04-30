@@ -13,6 +13,7 @@ export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/vr_ws/SLAM_CARV/Examples/ROS
 3. Applied some fixes to the code from the original ORB-SLAM2
 4. suppress all warnings so that we can only see errors and not warnings from deprecation in eigen.
 5. Make a ```config_files``` directory, that has all yaml files and configuration files.
+6. Change ```crono::monotonic_clock``` to ```chrono::steady_clock```
 
 # Compilation Edits
 1. Install ros melodic (Tutorial [Here](https://wiki.ros.org/melodic/Installation/Ubuntu]) )

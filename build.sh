@@ -7,8 +7,11 @@ cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make 
 
-cd ../../g2o
+cd ../../EDLines
+echo "Configuring and building Thirdparty/EDLines ..."
+make
 
+cd ../g2o
 echo "Configuring and building Thirdparty/g2o ..."
 
 mkdir build
