@@ -37,9 +37,8 @@ Thirdparty/DBoW2/build/*
 Thirdparty/g2o/build/*
 
 # large files
-Vocabulary/ORBvoc.txt
-Vocabulary/ORBvoc.bin
-tools/bin_vocabulary/*
+Vocabulary/*
+tools/*
 
 #vs code files
 .vscode/*
