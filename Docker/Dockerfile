@@ -17,6 +17,25 @@ ENV TZ=Europe/Minsk
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # ------------------------------------------------------------------------------------------
+# [0] Install newer compiler
+RUN apt-get update && \
+    apt-get install -y \
+    build-essential \
+    wget \
+    software-properties-common
+
+# Add GCC 7 repository and install GCC 7
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    apt-get update && \
+    apt-get install -y gcc-7 g++-7 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+
+# Set GCC 7 as the default compiler
+RUN update-alternatives --set gcc /usr/bin/gcc-7 && \
+    update-alternatives --set g++ /usr/bin/g++-7
+
+
+# ------------------------------------------------------------------------------------------
 # [1] General Dependencies
 RUN echo "[Dockerfile Info] Installing GENERAL Dependencies ......"
 RUN apt-get update && apt-get install -y \
