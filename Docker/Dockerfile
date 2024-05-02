@@ -29,9 +29,7 @@ RUN apt-get update && apt-get install -y \
 		git \
 		unzip \
 		curl \
-		software-properties-common \
-        libcgal-dev \ 
-        libcgal-qt5-dev
+		software-properties-common
 		
 
 # ------------------------------------------------------------------------------------------                                 
@@ -140,7 +138,11 @@ RUN apt-get update && apt-get install -y \
 	libpcap-dev \
 	libssl-dev \ 
 	libboost-dev \
-	libboost-serialization-dev
+	libboost-serialization-dev \
+	libopenblas-dev \
+	libcgal-dev \ 
+    libcgal-qt5-dev
+	
 
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
 RUN mkdir -p ~/orbslam3 && \

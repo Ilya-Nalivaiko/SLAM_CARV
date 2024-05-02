@@ -1,0 +1,7 @@
+xhost local:
+sudo docker run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --gpus=all --privileged --network host --env QT_X11_NO_MITSHM=1 -it kesisci/carv:latest /bin/bash
+source /CARV/Examples/ROS/ORB_CARV_Pub/build/devel/setup.bash
+rosrun ORB_CARV_Pub Mono Vocabulary/ORBvoc.txt chris_logic_HD720.yaml /camera/image_raw:=/camera/image/raw_image
+
+
+sudo docker run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix  --privileged --network host --env QT_X11_NO_MITSHM=1 -v /home/rowley/team_members_private_directories/sait/mav0:/CARV/mav0 -it kesisci/carv:latest /bin/bash 
