@@ -186,7 +186,8 @@ RUN apt-get update && apt-get install -y \
     libcgal-qt5-dev \
 	ros-kinetic-libg2o \
 	ros-kinetic-cv-bridge
-	
+
+RUN echo "TEST"
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
 RUN mkdir -p ~/orbslam3 && \
 	cd ~/orbslam3 && \

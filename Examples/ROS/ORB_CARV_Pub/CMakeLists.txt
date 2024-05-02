@@ -38,31 +38,38 @@ target_link_libraries(Mono
   ${catkin_LIBRARIES}
 )
 
+# Note: Nodes for stereo camera and RGB-D camera are commented out
+# as they are not currently needed. You can uncomment them if needed.
+
+#comment those nodes
+if(FALSE) # fake a block comment
 # Node for monocular camera (Augmented Reality Demo)
-add_executable(MonoAR
-  src/AR/ros_mono_ar.cc
-  src/AR/ViewerAR.h
-  src/AR/ViewerAR.cc
+rosbuild_add_executable(MonoAR
+src/AR/ros_mono_ar.cc
+src/AR/ViewerAR.h
+src/AR/ViewerAR.cc
 )
 
 target_link_libraries(MonoAR
-  ${catkin_LIBRARIES}
+${LIBS}
 )
 
 # Node for stereo camera
-add_executable(Stereo
-  src/ros_stereo.cc
+rosbuild_add_executable(Stereo
+src/ros_stereo.cc
 )
 
 target_link_libraries(Stereo
-  ${catkin_LIBRARIES}
+${LIBS}
 )
 
 # Node for RGB-D camera
-add_executable(RGBD
-  src/ros_rgbd.cc
+rosbuild_add_executable(RGBD
+src/ros_rgbd.cc
 )
 
 target_link_libraries(RGBD
-  ${catkin_LIBRARIES}
+${LIBS}
 )
+
+endif()
