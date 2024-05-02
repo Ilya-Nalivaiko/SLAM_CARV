@@ -134,10 +134,8 @@ RUN mkdir -p ~/pangolin && \
 # ------------------------------------------------------------------------------------------
 # [4] Eigen3
 RUN echo "[Dockerfile Info] Installing EIGEN3 Dependencies ......"
-RUN echo "[Dockerfile Info] Installing EIGEN3 Dependencies ......"
-# none
-# none
-RUN echo "[Dockerfile Info] Installing EIGEN3 ......"
+#none
+
 RUN echo "[Dockerfile Info] Installing EIGEN3 ......"
 RUN mkdir -p ~/eigen3 && \
 # installed in the pre-requisits of the opencv Library libeigen3-dev
@@ -189,7 +187,7 @@ RUN apt-get update && apt-get install -y \
 	ros-kinetic-libg2o \
 	ros-kinetic-cv-bridge
 	
-
+RUN echo "TEST"
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
 RUN mkdir -p ~/orbslam3 && \
 	cd ~/orbslam3 && \
