@@ -18,6 +18,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # ------------------------------------------------------------------------------------------
 # [0] Install newer compiler
+# Update package lists and install essential build tools
 RUN apt-get update && \
     apt-get install -y \
     build-essential \
@@ -28,7 +29,8 @@ RUN apt-get update && \
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \
     apt-get install -y gcc-7 g++-7 && \
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 60
 
 # Set GCC 7 as the default compiler
 RUN update-alternatives --set gcc /usr/bin/gcc-7 && \
@@ -149,6 +151,29 @@ RUN mkdir -p ~/eigen3 && \
 
 # ------------------------------------------------------------------------------------------
 # [5] Install ROS
+# Install necessary packages to set up ROS Kinetic
+RUN apt-get update && \
+    apt-get install -y \
+    gnupg2 \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add ROS repository
+RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu xenial main" > /etc/apt/sources.list.d/ros-latest.list' && \
+    apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+
+# Install ROS Kinetic full desktop
+RUN apt-get update && \
+    apt-get install -y \
+    ros-kinetic-desktop-full \
+    && rm -rf /var/lib/apt/lists/*
+
+# Initialize rosdep
+RUN rosdep init && \
+    rosdep update
+
+# Source ROS setup script
+RUN echo "source /opt/ros/kinetic/setup.bash" >> /root/.bashrc
 
 # ------------------------------------------------------------------------------------------
 # [6] Install SLAM CARV
@@ -160,7 +185,9 @@ RUN apt-get update && apt-get install -y \
 	libboost-serialization-dev \
 	libopenblas-dev \
 	libcgal-dev \ 
-    libcgal-qt5-dev
+    libcgal-qt5-dev \
+	ros-kinetic-libg2o \
+	ros-kinetic-cv-bridge
 	
 
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
@@ -170,6 +197,14 @@ RUN mkdir -p ~/orbslam3 && \
 	cd SLAM_CARV && \
 	chmod +x build.sh && \
 	./build.sh   
+
+RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
+    && /bin/bash -c "source /root/.bashrc"
+
+RUN cd ~/orbslam3 && \
+	cd SLAM_CARV && \
+	chmod +x build_ros.sh && \
+	./build_ros.sh
 
 
 # ############################################################################################
