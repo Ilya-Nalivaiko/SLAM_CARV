@@ -31,9 +31,9 @@
 #include <cv_bridge/cv_bridge.h>
 #include<opencv2/core/core.hpp>
 
-#include"../../../include/System.h"
+#include"../../include/System.h"
 
-#include "../../../include/KeyFrame.h"
+#include "../../include/KeyFrame.h"
 // #include "../../../include/MapPoint.h"
 // #include "../../../include/Converter.h"
 // #include "../../../include/Map.h"
