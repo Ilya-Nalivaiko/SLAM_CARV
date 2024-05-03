@@ -1,45 +1,92 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(ORB_SLAM2_Pub)
+cmake_minimum_required(VERSION 2.4.6)
+include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
-# Set build type if not specified
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
-message("Build type: ${CMAKE_BUILD_TYPE}")
+rosbuild_init()
 
-# Set compiler flags
+IF(NOT ROS_BUILD_TYPE)
+  SET(ROS_BUILD_TYPE Release)
+ENDIF()
+
+MESSAGE("Build type: " ${ROS_BUILD_TYPE})
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall  -O3 -march=native ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall  -O3 -march=native")
 
-# Check for C++14 support
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-message("Using flag -std=c++14.")
+# Check C++11 or C++0x support
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+if(COMPILER_SUPPORTS_CXX11)
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+   add_definitions(-DCOMPILEDWITHC11)
+   message(STATUS "Using flag -std=c++11.")
+elseif(COMPILER_SUPPORTS_CXX0X)
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+   add_definitions(-DCOMPILEDWITHC0X)
+   message(STATUS "Using flag -std=c++0x.")
+else()
+   message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+endif()
 
-# Find packages
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  std_msgs
-  cv_bridge
-)
+LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../../../cmake_modules)
 
-# Include directories
+find_package(OpenCV 3.0 QUIET)
+if(NOT OpenCV_FOUND)
+   find_package(OpenCV 2.4.3 QUIET)
+   if(NOT OpenCV_FOUND)
+      message(FATAL_ERROR "OpenCV > 2.4.3 not found.")
+   endif()
+endif()
+
+find_package(Eigen3 3.1.0 REQUIRED)
+find_package(Pangolin REQUIRED)
+
+# Find CGAL
+set(CMAKE_BUILD_TYPE_BACKUP ${CMAKE_BUILD_TYPE})
+set(CMAKE_BUILD_TYPE "Release")
+find_package(CGAL REQUIRED COMPONENTS Core)
+include( ${CGAL_USE_FILE} )
+set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE_BACKUP})
+# Find Boost
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+link_directories(${Boost_LIBRARY_DIR})
+# BLAS and LAPACK
+#set(BLAS_DIR /path/to/blas)
+#find_package(BLAS REQUIRED)
+#include_directories(${BLAS_INCLUDE_DIR})
+#link_directories(${BLAS_LIBRARY_DIR})
+#set(LAPACK_DIR /path/to/lapack)
+find_package(LAPACK REQUIRED)
+#include_directories(${LAPACK_INCLUDE_DIR})
+link_directories(${LAPACK_LIBRARY_DIR})
+
 include_directories(
-  ${catkin_INCLUDE_DIRS}
+${PROJECT_SOURCE_DIR}
+${PROJECT_SOURCE_DIR}/../../../
+${PROJECT_SOURCE_DIR}/../../../include
+${Pangolin_INCLUDE_DIRS}
 )
 
-# Add executable for monocular camera
-add_executable(Mono
-  src/ros_mono.cc
+set(LIBS 
+${OpenCV_LIBS} 
+${EIGEN3_LIBS}
+${Pangolin_LIBRARIES}
+${PROJECT_SOURCE_DIR}/../../../Thirdparty/DBoW2/lib/libDBoW2.so
+${PROJECT_SOURCE_DIR}/../../../Thirdparty/g2o/lib/libg2o.so
+${PROJECT_SOURCE_DIR}/../../../lib/libORB_SLAM2_Pub.so
+        lapack
+        blas
+)
+
+# Node for monocular camera
+rosbuild_add_executable(Mono
+src/ros_mono.cc
 )
 
 target_link_libraries(Mono
-  ${catkin_LIBRARIES}
+${LIBS}
 )
-
-# Note: Nodes for stereo camera and RGB-D camera are commented out
-# as they are not currently needed. You can uncomment them if needed.
 
 #comment those nodes
 if(FALSE) # fake a block comment

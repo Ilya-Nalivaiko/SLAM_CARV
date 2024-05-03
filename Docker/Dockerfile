@@ -202,10 +202,10 @@ RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Exam
 
 RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash"
 
-RUN cd ~/orbslam3 && \
-	cd SLAM_CARV && \
-	chmod +x build_ros.sh && \
-	./build_ros.sh
+# RUN cd ~/orbslam3 && \
+# 	cd SLAM_CARV && \
+# 	chmod +x build_ros_catkin.sh && \
+# 	./build_ros_catkin.sh
 
 
 # ############################################################################################
@@ -216,7 +216,7 @@ RUN cd ~/orbslam3 && \
 # The following part is adapted partially from : https://github.com/jupemara/x11vnc-docker
 # -----------------------------------------------------------------------------------------
 # ============================================================================================
-
+RUN echo "TESTING2"
 EXPOSE 5900
 ENV \
   DEBIAN_FRONTEND="nonintractive" \
