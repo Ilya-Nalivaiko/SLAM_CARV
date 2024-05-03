@@ -38,6 +38,7 @@ if(NOT OpenCV_FOUND)
    endif()
 endif()
 
+SET( EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}" )
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
 
