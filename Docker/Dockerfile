@@ -14,6 +14,7 @@ ENV PANGOLIN_VERSION 0.6
 ENV PANGOLIN_DOWNLOAD_PATH https://github.com/stevenlovegrove/Pangolin/archive/refs/tags/v$PANGOLIN_VERSION.zip
 
 ENV TZ=Europe/Minsk
+ENV CMAKE_PREFIX_PATH=/opt/ros/kinetic/share
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # ------------------------------------------------------------------------------------------
@@ -187,7 +188,7 @@ RUN apt-get update && apt-get install -y \
 	ros-kinetic-libg2o \
 	ros-kinetic-cv-bridge
 
-RUN echo "TEST"
+RUN echo "TESTING2"
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
 RUN mkdir -p ~/orbslam3 && \
 	cd ~/orbslam3 && \
@@ -198,6 +199,8 @@ RUN mkdir -p ~/orbslam3 && \
 
 RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
     && /bin/bash -c "source /root/.bashrc"
+
+RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash"
 
 RUN cd ~/orbslam3 && \
 	cd SLAM_CARV && \
