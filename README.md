@@ -25,3 +25,18 @@ export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/vr_ws/SLAM_CARV/Examples/ROS
 6. build ORB-SLAM2 ```./build.sh```
 7. change permission for build file of ROS modules ```chmod +x ./build_ros.sh```
 8. build ros modules ```./build_ros.sh```
+
+# Steps to run
+1. Make sure that the usb camera ros package is installed in the docker file and it is working
+```
+# in a terminal (To start ros)
+roscore
+
+# Then in another terminal do the following
+# ------------------------------------------
+# To install (if not installed from the Docker file)
+sudo apt-get install ros-kinetic-usb-cam
+
+# To run and test 
+roslaunch usb_cam usb_cam-test.launch
+```

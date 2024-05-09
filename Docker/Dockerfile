@@ -174,6 +174,11 @@ RUN rosdep init && \
 # Source ROS setup script
 RUN echo "source /opt/ros/kinetic/setup.bash" >> /root/.bashrc
 
+# install the usb_cam package (kinetic version)
+RUN apt-get update && \
+    apt-get install -y \
+    ros-kinetic-usb-cam
+
 # ------------------------------------------------------------------------------------------
 # [6] Install SLAM CARV
 
@@ -197,16 +202,20 @@ RUN mkdir -p ~/orbslam3 && \
 	chmod +x build.sh && \
 	./build.sh   
 
+# Set the default shell to bash
+SHELL ["/bin/bash", "-c"]
+
 RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
-    && /bin/bash -c "source /root/.bashrc"
+    && echo "source /root/.bashrc" >> /root/.bashrc \
+    && source /opt/ros/kinetic/setup.bash \
+	&& source /root/.bashrc \
+	&& export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
+	&& cd ~/orbslam3 \
+	&& cd SLAM_CARV \
+	&& chmod +x build_ros.sh \
+	&& ./build_ros.sh
 
-RUN /bin/bash -c "source /opt/ros/kinetic/setup.bash"
-
-# RUN cd ~/orbslam3 && \
-# 	cd SLAM_CARV && \
-# 	chmod +x build_ros_catkin.sh && \
-# 	./build_ros_catkin.sh
-
+SHELL ["/bin/sh", "-c"]
 
 # ############################################################################################
 # ############################################################################################
