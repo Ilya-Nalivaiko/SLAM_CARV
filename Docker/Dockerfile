@@ -206,7 +206,6 @@ RUN mkdir -p ~/orbslam3 && \
 SHELL ["/bin/bash", "-c"]
 
 RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
-    && echo "source /root/.bashrc" >> /root/.bashrc \
     && source /opt/ros/kinetic/setup.bash \
 	&& source /root/.bashrc \
 	&& export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
