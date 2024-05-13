@@ -76,8 +76,11 @@ ${Pangolin_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/../../../Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/../../../Thirdparty/g2o/lib/libg2o.so
 ${PROJECT_SOURCE_DIR}/../../../lib/libORB_SLAM2_Pub.so
-        lapack
-        blas
+/usr/local/lib/libopencv_core.so.3.4
+/usr/local/lib/libopencv_imgproc.so.3.4
+   -lboost_system
+   lapack
+   blas
 )
 
 # Node for monocular camera
