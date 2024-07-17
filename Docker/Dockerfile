@@ -196,14 +196,13 @@ RUN ls -l root/apps/
 
 # Extract the compressed file
 RUN tar -xJf root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.xz -C root/apps/
-RUN ls -l /root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64/
-
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEBIAN_FRONTEND teletype
 
 # Change to the extracted directory and run installation scripts
 RUN cd root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64 && \
+	ls -l && \
     yes | ./install_spinnaker.sh && \
     ./configure_usbfs.sh
 
