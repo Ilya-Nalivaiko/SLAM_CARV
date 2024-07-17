@@ -196,54 +196,56 @@ RUN ls -l root/apps/
 
 # Extract the compressed file
 RUN tar -xJf root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.xz -C root/apps/
+RUN ls -l /root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/
 
-ENV DEBIAN_FRONTEND noninteractive
-ENV DEBIAN_FRONTEND teletype
 
-# Change to the extracted directory and run installation scripts
-RUN cd root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64 && \
-    yes | ./install_spinnaker.sh && \
-    ./configure_usbfs.sh
+# ENV DEBIAN_FRONTEND noninteractive
+# ENV DEBIAN_FRONTEND teletype
 
-# ------------------------------------------------------------------------------------------
-# [7] Install flir camera ros driver and launch files
+# # Change to the extracted directory and run installation scripts
+# RUN cd root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64 && \
+#     yes | ./install_spinnaker.sh && \
+#     ./configure_usbfs.sh
 
-# ------------------------------------------------------------------------------------------
-# [8] Install SLAM CARV
+# # ------------------------------------------------------------------------------------------
+# # [7] Install flir camera ros driver and launch files
 
-RUN apt-get update && apt-get install -y \
-	libpcap-dev \
-	libssl-dev \ 
-	libboost-dev \
-	libboost-serialization-dev \
-	libopenblas-dev \
-	libcgal-dev \ 
-    libcgal-qt5-dev \
-	ros-kinetic-libg2o \
-	ros-kinetic-cv-bridge
+# # ------------------------------------------------------------------------------------------
+# # [8] Install SLAM CARV
 
-RUN echo "TESTING2"
-RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
-RUN mkdir -p ~/orbslam3 && \
-	cd ~/orbslam3 && \
-	git clone https://github.com/IslamAAli/SLAM_CARV.git && \
-	cd SLAM_CARV && \
-	chmod +x build.sh && \
-	./build.sh   
+# RUN apt-get update && apt-get install -y \
+# 	libpcap-dev \
+# 	libssl-dev \ 
+# 	libboost-dev \
+# 	libboost-serialization-dev \
+# 	libopenblas-dev \
+# 	libcgal-dev \ 
+#     libcgal-qt5-dev \
+# 	ros-kinetic-libg2o \
+# 	ros-kinetic-cv-bridge
 
-# Set the default shell to bash
-SHELL ["/bin/bash", "-c"]
+# RUN echo "TESTING2"
+# RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
+# RUN mkdir -p ~/orbslam3 && \
+# 	cd ~/orbslam3 && \
+# 	git clone https://github.com/IslamAAli/SLAM_CARV.git && \
+# 	cd SLAM_CARV && \
+# 	chmod +x build.sh && \
+# 	./build.sh   
 
-RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
-    && source /opt/ros/kinetic/setup.bash \
-	&& source /root/.bashrc \
-	&& export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
-	&& cd ~/orbslam3 \
-	&& cd SLAM_CARV \
-	&& chmod +x build_ros.sh \
-	&& ./build_ros.sh
+# # Set the default shell to bash
+# SHELL ["/bin/bash", "-c"]
 
-SHELL ["/bin/sh", "-c"]
+# RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
+#     && source /opt/ros/kinetic/setup.bash \
+# 	&& source /root/.bashrc \
+# 	&& export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
+# 	&& cd ~/orbslam3 \
+# 	&& cd SLAM_CARV \
+# 	&& chmod +x build_ros.sh \
+# 	&& ./build_ros.sh
+
+# SHELL ["/bin/sh", "-c"]
 
 # ############################################################################################
 # ############################################################################################
