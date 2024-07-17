@@ -179,72 +179,72 @@ RUN apt-get update && \
     apt-get install -y \
     ros-kinetic-usb-cam
 
-# ------------------------------------------------------------------------------------------
-# [6] Install flir camera drivers to docker 
+# # ------------------------------------------------------------------------------------------
+# # [6] Install flir camera drivers to docker 
 
-# Echo installation message
-RUN echo "[Dockerfile Info] Installing FLIR camera driver ......"
+# # Echo installation message
+# RUN echo "[Dockerfile Info] Installing FLIR camera driver ......"
 
-# Create the target directory
-RUN mkdir -p ~/apps
+# # Create the target directory
+# RUN mkdir -p ~/apps
 
-# Copy the compressed file to the target directory
-COPY spinnaker-3.2.0.62-amd64-pkg.20.04.tar.xz root/apps/
+# # Copy the compressed file to the target directory
+# COPY spinnaker-3.2.0.62-amd64-pkg.20.04.tar.xz root/apps/
 
-# List the contents of the target directory to verify the file copy
-RUN ls -l root/apps/
+# # List the contents of the target directory to verify the file copy
+# RUN ls -l root/apps/
 
-# Extract the compressed file
-RUN tar -xJf root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.xz -C root/apps/
+# # Extract the compressed file
+# RUN tar -xJf root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.xz -C root/apps/
 
-ENV DEBIAN_FRONTEND noninteractive
-ENV DEBIAN_FRONTEND teletype
+
+# ENV DEBIAN_FRONTEND noninteractive
+# ENV DEBIAN_FRONTEND teletype
 
 # # Change to the extracted directory and run installation scripts
 # RUN cd root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64 && \
-# 	ls -l && \
 #     yes | ./install_spinnaker.sh && \
 #     ./configure_usbfs.sh
 
-# # ------------------------------------------------------------------------------------------
-# # [7] Install flir camera ros driver and launch files
+# ------------------------------------------------------------------------------------------
+# [7] Install flir camera ros driver and launch files
 
-# # ------------------------------------------------------------------------------------------
-# # [8] Install SLAM CARV
+# ------------------------------------------------------------------------------------------
+# [8] Install SLAM CARV
 
-# RUN apt-get update && apt-get install -y \
-# 	libpcap-dev \
-# 	libssl-dev \ 
-# 	libboost-dev \
-# 	libboost-serialization-dev \
-# 	libopenblas-dev \
-# 	libcgal-dev \ 
-#     libcgal-qt5-dev \
-# 	ros-kinetic-libg2o \
-# 	ros-kinetic-cv-bridge
+RUN apt-get update && apt-get install -y \
+	libpcap-dev \
+	libssl-dev \ 
+	libboost-dev \
+	libboost-serialization-dev \
+	libopenblas-dev \
+	libcgal-dev \ 
+    libcgal-qt5-dev \
+	ros-kinetic-libg2o \
+	ros-kinetic-cv-bridge
 
-# RUN echo "TESTING2"
-# RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
-# RUN mkdir -p ~/orbslam3 && \
-# 	cd ~/orbslam3 && \
-# 	git clone https://github.com/IslamAAli/SLAM_CARV.git && \
-# 	cd SLAM_CARV && \
-# 	chmod +x build.sh && \
-# 	./build.sh   
+RUN echo "TESTING2"
+RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
+RUN mkdir -p ~/orbslam3 && \
+	cd ~/orbslam3 && \
+	git clone https://github.com/IslamAAli/SLAM_CARV.git && \
+	cd SLAM_CARV && \
+	chmod +x build.sh && \
+	./build.sh   
 
-# # Set the default shell to bash
-# SHELL ["/bin/bash", "-c"]
+# Set the default shell to bash
+SHELL ["/bin/bash", "-c"]
 
-# RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
-#     && source /opt/ros/kinetic/setup.bash \
-# 	&& source /root/.bashrc \
-# 	&& export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
-# 	&& cd ~/orbslam3 \
-# 	&& cd SLAM_CARV \
-# 	&& chmod +x build_ros.sh \
-# 	&& ./build_ros.sh
+RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
+    && source /opt/ros/kinetic/setup.bash \
+	&& source /root/.bashrc \
+	&& export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
+	&& cd ~/orbslam3 \
+	&& cd SLAM_CARV \
+	&& chmod +x build_ros.sh \
+	&& ./build_ros.sh
 
-# SHELL ["/bin/sh", "-c"]
+SHELL ["/bin/sh", "-c"]
 
 # ############################################################################################
 # ############################################################################################
