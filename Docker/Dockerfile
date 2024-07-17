@@ -197,12 +197,12 @@ RUN ls -l root/apps/
 # Extract the compressed file
 RUN tar -xJf root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.xz -C root/apps/
 
-# Set environment variable to accept EULA
-ENV ACCEPT_EULA=Y
+ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND teletype
 
 # Change to the extracted directory and run installation scripts
 RUN cd root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64 && \
-    ./install_spinnaker.sh && \
+    yes | ./install_spinnaker.sh && \
     ./configure_usbfs.sh
 
 # ------------------------------------------------------------------------------------------
