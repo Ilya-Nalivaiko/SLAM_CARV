@@ -198,7 +198,7 @@ RUN ls -l root/apps/
 RUN tar -xJf root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.xz -C root/apps/
 
 # Change to the extracted directory and run installation scripts
-RUN cd root/apps/spinnaker-3.2.0.62-amd64 && \
+RUN cd root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64 && \
     ./install_spinnaker.sh && \
     ./configure_usbfs.sh
 
