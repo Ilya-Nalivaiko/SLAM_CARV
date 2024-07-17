@@ -189,16 +189,16 @@ RUN echo "[Dockerfile Info] Installing FLIR camera driver ......"
 RUN mkdir -p ~/apps
 
 # Copy the compressed file to the target directory
-COPY spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz ~/apps/
+COPY spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz root/apps/
 
 # List the contents of the target directory to verify the file copy
-RUN ls -l ~/apps/
+RUN ls -l root/apps/
 
 # Extract the compressed file
-RUN tar -xzvf ~/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz -C ~/apps/
+RUN tar -xzvf root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz -C root/apps/
 
 # Change to the extracted directory and run installation scripts
-RUN cd ~/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64 && \
+RUN cd root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64 && \
     ./install_spinnaker.sh && \
     ./configure_usbfs.sh
 
