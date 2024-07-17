@@ -180,7 +180,21 @@ RUN apt-get update && \
     ros-kinetic-usb-cam
 
 # ------------------------------------------------------------------------------------------
-# [6] Install SLAM CARV
+# [6] Install flir camera drivers to docker 
+
+RUN echo "[Dockerfile Info] Installing FLIR camera driver ......"
+RUN mkdir -p ~/apps
+COPY spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz ~/apps/
+RUN tar -xzvf ~/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz -C ~/apps/
+RUN cd ~/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64 && \
+	./install_spinnaker.sh && \
+	./configure_usbfs.sh
+
+# ------------------------------------------------------------------------------------------
+# [7] Install flir camera ros driver and launch files
+
+# ------------------------------------------------------------------------------------------
+# [8] Install SLAM CARV
 
 RUN apt-get update && apt-get install -y \
 	libpcap-dev \
