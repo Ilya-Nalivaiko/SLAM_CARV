@@ -223,7 +223,7 @@ RUN apt-get update && apt-get install -y \
 	ros-kinetic-libg2o \
 	ros-kinetic-cv-bridge
 
-RUN echo "TESTING2"
+
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
 RUN mkdir -p ~/orbslam3 && \
 	cd ~/orbslam3 && \
@@ -246,6 +246,7 @@ RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Exam
 
 SHELL ["/bin/sh", "-c"]
 
+RUN echo "TESTING2"
 # ############################################################################################
 # ############################################################################################
 # ############################################################################################

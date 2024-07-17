@@ -1,4 +1,4 @@
-docker run  -d -p 5900:5900 
+docker run -d -p 5900:5900 
             --rm 
             --network host
             -e DISPLAY=$DISPLAY 
