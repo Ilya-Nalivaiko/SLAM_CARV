@@ -7,6 +7,10 @@ Export command
 export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/vr_ws/SLAM_CARV/Examples/ROS
 ```
 
+# Resources
+FLIR camera setup with ros and linux
+[Here](https://www.flir.ca/support-center/iis/machine-vision/application-note/using-ros-with-spinnaker/)
+
 # Differences from original repo
 1. Working with c++14
 2. removed build folders being in git repo for cleaner build.

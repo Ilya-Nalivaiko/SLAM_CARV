@@ -182,13 +182,25 @@ RUN apt-get update && \
 # ------------------------------------------------------------------------------------------
 # [6] Install flir camera drivers to docker 
 
+# Echo installation message
 RUN echo "[Dockerfile Info] Installing FLIR camera driver ......"
+
+# Create the target directory
 RUN mkdir -p ~/apps
+
+# Copy the compressed file to the target directory
 COPY spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz ~/apps/
+
+# List the contents of the target directory to verify the file copy
+RUN ls -l ~/apps/
+
+# Extract the compressed file
 RUN tar -xzvf ~/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz -C ~/apps/
+
+# Change to the extracted directory and run installation scripts
 RUN cd ~/apps/spinnaker-3.2.0.62-amd64-pkg.20.04/spinnaker-3.2.0.62-amd64 && \
-	./install_spinnaker.sh && \
-	./configure_usbfs.sh
+    ./install_spinnaker.sh && \
+    ./configure_usbfs.sh
 
 # ------------------------------------------------------------------------------------------
 # [7] Install flir camera ros driver and launch files
