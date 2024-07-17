@@ -195,7 +195,7 @@ COPY spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz root/apps/
 RUN ls -l root/apps/
 
 # Extract the compressed file
-RUN tar -xzvf root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz -C root/apps/
+RUN tar -xzvf root/apps/spinnaker-3.2.0.62-amd64-pkg.20.04.tar.xz -C root/apps/
 
 # Change to the extracted directory and run installation scripts
 RUN cd root/apps/spinnaker-3.2.0.62-amd64 && \
