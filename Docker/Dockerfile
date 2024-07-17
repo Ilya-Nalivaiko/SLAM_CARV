@@ -189,7 +189,7 @@ RUN echo "[Dockerfile Info] Installing FLIR camera driver ......"
 RUN mkdir -p ~/apps
 
 # Copy the compressed file to the target directory
-COPY spinnaker-3.2.0.62-amd64-pkg.20.04.tar.gz root/apps/
+COPY spinnaker-3.2.0.62-amd64-pkg.20.04.tar.xz root/apps/
 
 # List the contents of the target directory to verify the file copy
 RUN ls -l root/apps/
