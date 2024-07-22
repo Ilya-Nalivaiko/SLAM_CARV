@@ -227,7 +227,7 @@ RUN apt-get update && apt-get install -y \
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
 RUN mkdir -p ~/orbslam3 && \
 	cd ~/orbslam3 && \
-	git clone https://github.com/IslamAAli/SLAM_CARV.git && \
+	git clone --depth 1 https://github.com/IslamAAli/SLAM_CARV.git && \
 	cd SLAM_CARV && \
 	chmod +x build.sh && \
 	./build.sh   
