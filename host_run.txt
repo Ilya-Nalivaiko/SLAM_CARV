@@ -10,4 +10,4 @@ source ~/catkin_ws/devel/setup.bash
 roslaunch spinnaker_camera_driver camera.launch 
 
 # image compression for network transfer
-rosrun image_transport republish compressed in:=/camera/image_raw out:=/camera/compressed & 
+rosrun image_transport republish compressed in:=/camera/image_raw out:=/camera/compressed 
