@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# roscore to have a single master, used for the whole network
+roscore
+
+# source 
+source ~/catkin_ws/devel/setup.bash
+
+# run the camera publishing node
+roslaunch spinnaker_camera_driver camera.launch 
+
+# image compression for network transfer
+rosrun image_transport republish compressed in:=/camera/image_raw out:=/camera/compressed & 
