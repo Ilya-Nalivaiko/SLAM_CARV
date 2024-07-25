@@ -19,17 +19,20 @@
 */
 
 
-#include<iostream>
-#include<algorithm>
-#include<fstream>
-#include<chrono>
+#include <iostream>
+#include <algorithm>
+#include <fstream>
+#include <chrono>
+#include <thread>
 
 #include<ros/ros.h>
 #include <std_msgs/Header.h>
 #include "std_msgs/String.h"
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
-#include<opencv2/core/core.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include"../../../include/System.h"
 
@@ -52,6 +55,36 @@ public:
 
     ORB_SLAM2::System* mpSLAM;
 };
+
+void captureAndPublishFrames(image_transport::Publisher& pub)
+{
+    // Hardcoded RTSP URL and frame rate
+    const std::string rtsp_url = "rtsp://your_rtsp_address_here";
+    const int frame_rate = 30;
+
+    cv::VideoCapture cap(rtsp_url);
+    if (!cap.isOpened()) {
+        ROS_ERROR("Could not open RTSP stream: %s", rtsp_url.c_str());
+        return;
+    }
+
+    cv::Mat frame;
+    sensor_msgs::ImagePtr msg;
+    ros::Rate loop_rate(frame_rate);
+
+    while (ros::ok()) {
+        cap >> frame;
+        if (frame.empty()) {
+            ROS_ERROR("Captured empty frame");
+            continue;
+        }
+
+        msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
+        pub.publish(msg);
+
+        loop_rate.sleep();
+    }
+}
 
 int max_kfId;
 ros::Publisher pubTask;
@@ -76,11 +109,31 @@ int main(int argc, char **argv)
     ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
+
+    // ==============================================================================
+    // CARV Edit
+    // ==============================================================================
+    // Set up image transport publisher
+    image_transport::ImageTransport it(nodeHandler);
+    image_transport::Publisher pub = it.advertise("/camera/image_raw", 1);
+
+    // Start thread for capturing frames
+    std::thread capture_thread(captureAndPublishFrames, std::ref(pub));
+    // ==============================================================================
+
+
     ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
 
     pubTask = nodeHandler.advertise<std_msgs::String>("/chris/twc", 1);
     pubCARVScripts = nodeHandler.advertise<std_msgs::String>("/carv/script", 1);
     ros::spin();
+
+    // ==============================================================================
+    // CARV Edit
+    // ==============================================================================
+    // join thread
+    capture_thread.join();
+    // ==============================================================================
 
     // Stop all threads
     SLAM.Shutdown();
@@ -108,7 +161,7 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
     }
 
     mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
-    ORB_SLAM2::KeyFrame* pKF = mpSLAM->mpMap->newestKeyFrame;;
+    ORB_SLAM2::KeyFrame* pKF = mpSLAM->mpMap->newestKeyFrame;
     if(pKF != NULL)
     {
       int nowMaxId=mpSLAM->mpMap->GetMaxKFid();
