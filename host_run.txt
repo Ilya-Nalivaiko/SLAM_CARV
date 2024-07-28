@@ -7,7 +7,7 @@ roscore
 source ~/catkin_ws/devel/setup.bash
 
 # run ffmpeg to ros bridge
-rosrun ffmpeg2ros ffmpeg2ros half gray
+rosrun ffmpeg2ros ffmpeg2ros half grey
 
 # run inertactive session on docker 
 docker exec -it <docker container id> bash

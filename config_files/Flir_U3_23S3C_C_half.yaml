@@ -19,7 +19,7 @@ Camera.width: 960  # Halved from 1920
 Camera.height: 600  # Halved from 1200
 
 # Camera frames per second 
-Camera.fps: 60
+Camera.fps: 22
 
 # Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
 Camera.RGB: 1

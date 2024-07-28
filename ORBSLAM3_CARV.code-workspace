@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "."
+		},
+		{
+			"path": "../../../catkin_ws/src/ffmpeg2ros"
 		}
 	],
 	"settings": {}
