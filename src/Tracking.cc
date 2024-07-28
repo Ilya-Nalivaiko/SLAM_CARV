@@ -247,9 +247,14 @@ namespace ORB_SLAM2
         int width = 100;
         int height = 100;
 
-        cv::Rect maskRegion(x, y, width, height); // Define the region to mask
-        cv::Mat mask = cv::Mat::zeros(im.size(), CV_8UC1); // Create a mask
-        mask(maskRegion) = 255; // Set the mask region to white
+        // Create a mask of the same size as the image, initialized to white
+        cv::Mat mask = cv::Mat::ones(im.size(), CV_8UC1) * 255; 
+
+        // Create a black rectangle where the region to mask out is
+        cv::Rect maskRegion(x, y, width, height);
+        mask(maskRegion) = 0; // Set the mask region to black
+        
+        // Apply the mask to the image
         cv::Mat maskedFrame;
         im.copyTo(maskedFrame, mask); // Apply the mask to the frame
 
