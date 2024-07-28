@@ -243,9 +243,9 @@ namespace ORB_SLAM2
 
         // =====================================================
         // Edit - Islam - mask to filter out robot arm
-        int x = 92; int y = 90; 
-        int width = 300;
-        int height = 200;
+        int x = 180; int y = 170; 
+        int width = 580;
+        int height = 430;
 
         cv::Rect blurRegion(x, y, width, height);
             
