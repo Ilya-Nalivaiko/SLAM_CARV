@@ -244,15 +244,15 @@ namespace ORB_SLAM2
         // =====================================================
         // Edit - Islam - mask to filter out robot arm
         int x = 0; int y = 0; 
-        int width = 300;
-        int height = 300;
+        int width = 500;
+        int height = 500;
 
         cv::Rect blurRegion(x, y, width, height);
             
         // Create a blurred version of the region
         cv::Mat blurredRegion;
         cv::Mat region = im(blurRegion);
-        cv::GaussianBlur(region, blurredRegion, cv::Size(15, 15), 0);
+        cv::GaussianBlur(region, blurredRegion, cv::Size(101, 101), 0);
 
         // Copy the blurred region back into the original image
         blurredRegion.copyTo(im(blurRegion));
