@@ -241,6 +241,21 @@ namespace ORB_SLAM2
     {
         mImGray = im;
 
+        // =====================================================
+        // Edit - Islam - mask to filter out robot arm
+        int x = 0; int y = 0; 
+        int width = 100;
+        int height = 100;
+
+        cv::Rect maskRegion(x, y, width, height); // Define the region to mask
+        cv::Mat mask = cv::Mat::zeros(im.size(), CV_8UC1); // Create a mask
+        mask(maskRegion) = 255; // Set the mask region to white
+        cv::Mat maskedFrame;
+        im.copyTo(maskedFrame, mask); // Apply the mask to the frame
+
+        mImGray = maskedFrame;
+        // =====================================================
+
         if(mImGray.channels()==3)
         {
             if(mbRGB)
