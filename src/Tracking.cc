@@ -244,21 +244,20 @@ namespace ORB_SLAM2
         // =====================================================
         // Edit - Islam - mask to filter out robot arm
         int x = 0; int y = 0; 
-        int width = 100;
-        int height = 100;
+        int width = 300;
+        int height = 300;
 
-        // Create a mask of the same size as the image, initialized to white
-        cv::Mat mask = cv::Mat::ones(im.size(), CV_8UC1) * 255; 
+        cv::Rect blurRegion(x, y, width, height);
+            
+        // Create a blurred version of the region
+        cv::Mat blurredRegion;
+        cv::Mat region = im(blurRegion);
+        cv::GaussianBlur(region, blurredRegion, cv::Size(15, 15), 0);
 
-        // Create a black rectangle where the region to mask out is
-        cv::Rect maskRegion(x, y, width, height);
-        mask(maskRegion) = 0; // Set the mask region to black
-        
-        // Apply the mask to the image
-        cv::Mat maskedFrame;
-        im.copyTo(maskedFrame, mask); // Apply the mask to the frame
+        // Copy the blurred region back into the original image
+        blurredRegion.copyTo(im(blurRegion));
 
-        mImGray = maskedFrame;
+        mImGray = im;
         // =====================================================
 
         if(mImGray.channels()==3)
