@@ -12,13 +12,14 @@ rosrun ffmpeg2ros ffmpeg2ros half grey
 # run inertactive session on docker 
 docker exec -it <docker container id> bash
 
-# run CARV
-rosrun 
-
-D121wsnf!
+# allow GUI on docker image
+xhost +local:docker
 
 # run the camera publishing node
 roslaunch spinnaker_camera_driver camera.launch 
 
 # image compression for network transfer
 rosrun image_transport republish compressed in:=/camera/image_raw out:=/camera/compressed 
+
+# running CARV with Flir camera on robot
+rosrun ORB_CARV_Pub Mono Vocabulary/ORBvoc.txt config_files/Flir_U3_23S3C_C_half.yaml /camera/image_raw:=/ffmpeg2ros/grey
