@@ -345,7 +345,8 @@ namespace ORB_SLAM2
                 }
                 else
                 {
-                    bOK = Relocalization();
+                    // bOK = Relocalization();
+                    MonocularInitialization();
                 }
             }
             else
