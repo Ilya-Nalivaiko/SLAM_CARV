@@ -345,7 +345,10 @@ namespace ORB_SLAM2
                 }
                 else
                 {
-                    bOK = Relocalization();
+                    // bOK = Relocalization();
+                    // Islam's edit
+                    mpSystem->Reset();
+                    mState=NOT_INITIALIZED;
                 }
             }
             else

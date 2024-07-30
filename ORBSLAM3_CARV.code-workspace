@@ -13,5 +13,10 @@
 			"path": "../../../catkin_ws/src/rtsp_reader"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"condition_variable": "cpp",
+			"*.ipp": "cpp"
+		}
+	}
 }
