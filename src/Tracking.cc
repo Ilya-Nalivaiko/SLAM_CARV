@@ -354,7 +354,8 @@ namespace ORB_SLAM2
 
                 if(mState==LOST)
                 {
-                    bOK = Relocalization();
+                    // bOK = Relocalization();
+                    MonocularInitialization();
                 }
                 else
                 {
