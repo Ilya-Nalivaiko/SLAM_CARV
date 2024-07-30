@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../../../catkin_ws/src/ffmpeg2ros"
+		},
+		{
+			"path": "../../../catkin_ws/src/rtsp_reader"
 		}
 	],
 	"settings": {}
