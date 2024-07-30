@@ -345,8 +345,7 @@ namespace ORB_SLAM2
                 }
                 else
                 {
-                    // bOK = Relocalization();
-                    MonocularInitialization();
+                    bOK = Relocalization();
                 }
             }
             else
@@ -355,8 +354,7 @@ namespace ORB_SLAM2
 
                 if(mState==LOST)
                 {
-                    // bOK = Relocalization();
-                    MonocularInitialization();
+                    bOK = Relocalization();
                 }
                 else
                 {
