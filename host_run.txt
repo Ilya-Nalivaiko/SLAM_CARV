@@ -22,4 +22,4 @@ roslaunch spinnaker_camera_driver camera.launch
 rosrun image_transport republish compressed in:=/camera/image_raw out:=/camera/compressed 
 
 # running CARV with Flir camera on robot
-rosrun ORB_CARV_Pub Mono Vocabulary/ORBvoc.txt config_files/Flir_U3_23S3C_C_half.yaml /camera/image_raw:=/ffmpeg2ros/grey
+rosrun ORB_CARV_Pub Mono Vocabulary/ORBvoc.txt config_files/Flir_U3_23S3C_C_half.yaml /camera/image_raw:=/rtsp_camera/image
