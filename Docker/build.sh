@@ -9,4 +9,4 @@ echo "> VERSION: 1.0"
 echo "========================================================================================================="
 
                                                                                                          
-docker build --rm --progress=plain -t islamaali/slam_carv-docker:v1.0 .
+docker build -t islamaali/slam_carv-docker:v1.0 .

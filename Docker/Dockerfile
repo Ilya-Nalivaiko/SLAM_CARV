@@ -246,6 +246,39 @@ RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Exam
 
 SHELL ["/bin/sh", "-c"]
 
+
+
+
+RUN echo "[Dockerfile Info] COPYING Networked Camera......"
+
+# Copy the compressed file to the target directory
+COPY camera.tar /root/apps/	
+
+# List the contents of the target directory to verify the file copy
+RUN ls -l /root/apps/
+
+# Extract the compressed file
+RUN tar -xvf /root/apps/camera.tar -C /root/apps/
+
+# Build the catkin stuff
+#RUN cd /root/apps/camera
+#RUN catkin_make
+
+# chmod
+RUN chmod +x /root/apps/camera/run.sh
+
+
+
+
+RUN echo "Fixing run file"
+RUN chmod +x /root/orbslam3/SLAM_CARV/run.sh
+# TODO fix the config file location
+
+
+
+
+
+
 RUN echo "TESTING2"
 # ############################################################################################
 # ############################################################################################
@@ -264,3 +297,10 @@ RUN apt-get update -y
 RUN apt-get install -y xvfb x11vnc fluxbox
 ADD ./entrypoint.sh /opt/entrypoint.sh
 ENTRYPOINT /opt/entrypoint.sh
+
+
+
+
+
+
+
