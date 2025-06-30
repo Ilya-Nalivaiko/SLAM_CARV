@@ -24,7 +24,8 @@ RUN apt-get update && \
     apt-get install -y \
     build-essential \
     wget \
-    software-properties-common
+    software-properties-common \
+	nano
 
 # Add GCC 7 repository and install GCC 7
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
@@ -227,10 +228,11 @@ RUN apt-get update && apt-get install -y \
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
 RUN mkdir -p ~/orbslam3 && \
 	cd ~/orbslam3 && \
-	git clone --depth 1 https://github.com/IslamAAli/SLAM_CARV.git && \
+	git clone --depth 1 https://github.com/Ilya-Nalivaiko/SLAM_CARV.git && \
 	cd SLAM_CARV && \
 	chmod +x build.sh && \
-	./build.sh   
+	./build.sh && \
+	chmod +x /root/orbslam3/SLAM_CARV/run.sh
 
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
@@ -261,20 +263,12 @@ RUN ls -l /root/apps/
 RUN tar -xvf /root/apps/camera.tar -C /root/apps/
 
 # Build the catkin stuff
-#RUN cd /root/apps/camera
-#RUN catkin_make
+# RUN cd /root/apps/camera
+# RUN source /root/.bashrc
+# RUN catkin_make
 
 # chmod
 RUN chmod +x /root/apps/camera/run.sh
-
-
-
-
-RUN echo "Fixing run file"
-RUN chmod +x /root/orbslam3/SLAM_CARV/run.sh
-# TODO fix the config file location
-
-
 
 
 
@@ -297,10 +291,3 @@ RUN apt-get update -y
 RUN apt-get install -y xvfb x11vnc fluxbox
 ADD ./entrypoint.sh /opt/entrypoint.sh
 ENTRYPOINT /opt/entrypoint.sh
-
-
-
-
-
-
-
