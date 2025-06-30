@@ -42,3 +42,7 @@ tools/*
 
 #vs code files
 .vscode/*
+
+# camera catkin build
+camera/build
+camera/devel
