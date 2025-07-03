@@ -225,14 +225,25 @@ RUN apt-get update && apt-get install -y \
 	ros-kinetic-cv-bridge
 
 
-RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
-RUN mkdir -p ~/orbslam3 && \
-	cd ~/orbslam3 && \
-	git clone --depth 1 https://github.com/Ilya-Nalivaiko/SLAM_CARV.git && \
-	cd SLAM_CARV && \
-	chmod +x build.sh && \
-	./build.sh && \
-	chmod +x /root/orbslam3/SLAM_CARV/run.sh
+# RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from GitHub ......"
+# RUN mkdir -p ~/orbslam3 && \
+# 	cd ~/orbslam3 && \
+# 	git clone --depth 1 https://github.com/Ilya-Nalivaiko/SLAM_CARV.git && \
+# 	cd SLAM_CARV && \
+# 	chmod +x build.sh && \
+# 	./build.sh && \
+# 	chmod +x /root/orbslam3/SLAM_CARV/run.sh
+
+RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from local source ......"
+RUN mkdir -p /root/orbslam3/SLAM_CARV
+COPY . /root/orbslam3/SLAM_CARV
+RUN echo "Recursive listing to confirm contents:" && find /root/orbslam3/SLAM_CARV
+RUN cd /root/orbslam3/SLAM_CARV && \
+    chmod +x build.sh && \
+    ./build.sh && \
+    chmod +x /root/orbslam3/SLAM_CARV/run.sh
+
+
 
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
@@ -254,7 +265,7 @@ SHELL ["/bin/sh", "-c"]
 RUN echo "[Dockerfile Info] COPYING Networked Camera......"
 
 # Copy the compressed file to the target directory
-COPY camera.tar /root/apps/	
+COPY Docker/camera.tar /root/apps/	
 
 # List the contents of the target directory to verify the file copy
 RUN ls -l /root/apps/
@@ -289,5 +300,5 @@ ENV \
   X11VNC_PASSWORD="password"
 RUN apt-get update -y
 RUN apt-get install -y xvfb x11vnc fluxbox
-ADD ./entrypoint.sh /opt/entrypoint.sh
+ADD ./Docker/entrypoint.sh /opt/entrypoint.sh
 ENTRYPOINT /opt/entrypoint.sh
