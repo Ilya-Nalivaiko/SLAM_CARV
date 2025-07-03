@@ -194,7 +194,7 @@ namespace ORB_SLAM2
             
             if(menuSendModel)
             {
-                mpModelDrawer->SendModel();
+                //mpModelDrawer->SendModel();
                 menuSendModel = false; // reset the toggle so it sends only once per click for now
             }
 
