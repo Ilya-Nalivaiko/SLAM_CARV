@@ -39,6 +39,8 @@
 // #include "../../../include/Map.h"
 // #include "../../../include/MapPoint.h"
 
+#include "../../../include/NetworkIntegration/HttpService.h"
+
 using namespace std;
 
 
@@ -63,20 +65,36 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "Mono");
     ros::start();
 
-    if(argc != 3)
+    if(argc != 7)
     {
-        cerr << endl << "Usage: rosrun ORB_SLAM2 Mono path_to_vocabulary path_to_settings" << endl;
+        cerr << endl << "Usage: rosrun ORB_CARV_Pub Mono path_to_vocabulary path_to_settings own_ip http_port unity_ip unity_zmq_port" << endl;
         ros::shutdown();
         return 1;
     }
 
+    std::string ownIp = argv[3];
+    int httpPort = std::stoi(argv[4]);
+    std::string unityIp = argv[5];
+    int zmqPort = std::stoi(argv[6]);
+
+    std::string ownAddress = ownIp + ":" + std::to_string(httpPort);
+    std::string unityAddress = unityIp + ":" + std::to_string(zmqPort);
+
+    // Create ChunkCache and HTTP Server
+    ChunkCache cache;
+    HttpService server(httpPort, cache);
+    server.start();
+
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
+    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, true);
+
+    // Pass addresses and cache to ModelDrawer
+    SLAM.mpModelDrawer->SetNetworkIntegration(&cache, ownAddress, unityAddress);
 
     ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage, &igb);
 
     pubTask = nodeHandler.advertise<std_msgs::String>("/chris/twc", 1);
     pubCARVScripts = nodeHandler.advertise<std_msgs::String>("/carv/script", 1);
@@ -85,6 +103,9 @@ int main(int argc, char **argv)
     // Stop all threads
     SLAM.Shutdown();
 
+    // Stop HTTP Server
+    server.stop();
+
     // Save camera trajectory
     SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
 
@@ -92,6 +113,7 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
 
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {

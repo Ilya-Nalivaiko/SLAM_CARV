@@ -135,6 +135,9 @@ namespace ORB_SLAM2
         Map* mpMap;
         //CARV: Modeler that take map logs to create and display the reconstructed model
         Modeler* mpModeler;
+
+        ModelDrawer* mpModelDrawer;
+
     private:
 
         // Input sensor
@@ -159,9 +162,6 @@ namespace ORB_SLAM2
         // Loop Closer. It searches loops with every new keyframe. If there is a loop it performs
         // a pose graph optimization and full bundle adjustment (in a new thread) afterwards.
         LoopClosing* mpLoopCloser;
-
-
-        ModelDrawer* mpModelDrawer;
 
         // The viewer draws the map and the current camera pose. It uses Pangolin.
         Viewer* mpViewer;

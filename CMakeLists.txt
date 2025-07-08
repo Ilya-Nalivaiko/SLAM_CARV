@@ -50,6 +50,8 @@ link_directories(${LAPACK_LIBRARY_DIR})
 include_directories(
         ${PROJECT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include/NetworkIntegration
+        ${PROJECT_SOURCE_DIR}/include/NetworkIntegration/external
         ${EIGEN3_INCLUDE_DIR}
         ${Pangolin_INCLUDE_DIRS}
         ${PROJECT_SOURCE_DIR}/Thirdparty/Line3Dpp
@@ -57,6 +59,9 @@ include_directories(
 )
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+
+set(CMAKE_CXX_VISIBILITY_PRESET default)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN OFF)
 
 # added carv source file
 add_library(${PROJECT_NAME} SHARED
@@ -92,7 +97,20 @@ add_library(${PROJECT_NAME} SHARED
         src/Modeler/ModelDrawer.cc
         src/Modeler/ModelSender.cpp
         src/Modeler/TextureFrame.cc
+        src/NetworkIntegration/ChunkCache.cpp
+        src/NetworkIntegration/Encoder.cpp
+        src/NetworkIntegration/HttpService.cpp
+        src/NetworkIntegration/Notifier.cpp
         )
+
+# ZMQ Library
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PC_ZMQ QUIET zmq)
+find_path(ZMQ_INCLUDE_DIR zmq.h PATHS ${PC_ZMQ_INCLUDE_DIRS})
+find_library(ZMQ_LIB zmq PATHS ${PC_ZMQ_LIBRARY_DIRS})
+mark_as_advanced(ZMQ_INCLUDE_DIR ZMQ_LIB)
+include_directories(${ZMQ_INCLUDE_DIR})
+set(LIBS ${LIBS} ${ZMQ_LIB})
 
 # add lapack blas link
 target_link_libraries(${PROJECT_NAME}

@@ -16,6 +16,7 @@
 #include "Modeler/Matrix.h"
 #include "Modeler/Modeler.h"
 #include "Modeler/TextureFrame.h"
+#include "NetworkIntegration/ChunkCache.h"
 
 namespace ORB_SLAM2
 {
@@ -47,9 +48,18 @@ namespace ORB_SLAM2
 
         void SetModeler(Modeler* pModeler);
         Modeler* mpModeler;
+
+        void SetNetworkIntegration(ChunkCache* cache, const std::string& ownAddr, const std::string& unityAddr) {
+        mpChunkCache = cache;
+        mOwnAddress = ownAddr;
+        mUnityAddress = unityAddr;
+        
+    }
     private:
 
-
+        ChunkCache* mpChunkCache = nullptr;
+        std::string mOwnAddress;
+        std::string mUnityAddress;
 
         bool mbModelUpdateRequested;
         bool mbModelUpdateDone;
@@ -62,3 +72,4 @@ namespace ORB_SLAM2
 } //namespace ORB_SLAM
 
 #endif //__MODELDRAWER_H
+

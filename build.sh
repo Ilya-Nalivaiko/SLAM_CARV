@@ -4,9 +4,9 @@
 # Forced environment setup
 # ================================
 
-# Force GCC 7 explicitly
-export CC=/usr/bin/gcc-7
-export CXX=/usr/bin/g++-7
+# Force GCC 8 explicitly
+export CC=/usr/bin/gcc-8
+export CXX=/usr/bin/g++-8
 
 echo "[INFO] Using compilers:"
 which gcc

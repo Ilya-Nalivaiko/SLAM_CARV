@@ -5,14 +5,13 @@ MAINTAINER Islam A. Ali <islam.a.mustafa@gmail.com>
 
 # ------------------------------------------------------------------------------------------
 # Definitions
-ENV OPENCV_VERSION 3.4.1
-ENV OPENCV_DOWNLOAD_URL https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip
-ENV OpenCV_DIR opencv-$OPENCV_VERSION
-ENV EIGEN_VERSION 3.3.2
-ENV EIGEN_DOWNLOAD_URL http://bitbucket.org/eigen/eigen/get/$EIGEN_VERSION.tar.gz
-ENV PANGOLIN_VERSION 0.6
-ENV PANGOLIN_DOWNLOAD_PATH https://github.com/stevenlovegrove/Pangolin/archive/refs/tags/v$PANGOLIN_VERSION.zip
-ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV OPENCV_VERSION=3.4.1
+ENV OPENCV_DOWNLOAD_URL=https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip
+ENV OpenCV_DIR=opencv-$OPENCV_VERSION
+ENV EIGEN_VERSION=3.3.2
+ENV EIGEN_DOWNLOAD_URL=http://bitbucket.org/eigen/eigen/get/$EIGEN_VERSION.tar.gz
+ENV PANGOLIN_VERSION=0.6
+ENV PANGOLIN_DOWNLOAD_PATH=https://github.com/stevenlovegrove/Pangolin/archive/refs/tags/v$PANGOLIN_VERSION.zip
 
 ENV TZ=Europe/Minsk
 ENV CMAKE_PREFIX_PATH=/opt/ros/kinetic/share
@@ -28,18 +27,18 @@ RUN apt-get update && \
     software-properties-common \
 	nano
 
-# Add GCC 7 repository and install GCC 7
+# Add GCC 8 repository and install GCC 8
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \
-    apt-get install -y gcc-7 g++-7 && \
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 60
+    apt-get install -y gcc-8 g++-8 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 80 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 80
 
-# Set GCC 7 as the default compiler
-RUN update-alternatives --set gcc /usr/bin/gcc-7 && \
-    update-alternatives --set g++ /usr/bin/g++-7
-RUN export CC=/usr/bin/gcc-7
-RUN export CXX=/usr/bin/g++-7
+# Set GCC 8 as the default compiler
+RUN update-alternatives --set gcc /usr/bin/gcc-8 && \
+    update-alternatives --set g++ /usr/bin/g++-8
+RUN export CC=/usr/bin/gcc-8
+RUN export CXX=/usr/bin/g++-8
 
 # need newer cmake too
 RUN apt-get remove -y cmake
@@ -234,42 +233,42 @@ RUN apt-get update && \
 
 
 
-# ========== BEGIN TROUBLESHOOTING BLOCK ==========
+# # ========== BEGIN TROUBLESHOOTING BLOCK ==========
 
-RUN echo "[DEBUG] ==== System environment ====" && \
-    env && \
-    echo "[DEBUG] ==== gcc version ====" && \
-    gcc --version && \
-    echo "[DEBUG] ==== g++ version ====" && \
-    g++ --version && \
-    echo "[DEBUG] ==== c++ version ====" && \
-    c++ --version && \
-    echo "[DEBUG] ==== which gcc / g++ / c++ ====" && \
-    which gcc && which g++ && which c++ && \
-    echo "[DEBUG] ==== update-alternatives status ====" && \
-    update-alternatives --display gcc && \
-    update-alternatives --display g++ && \
-    echo "[DEBUG] ==== CMake version ====" && \
-    cmake --version && \
-    echo "[DEBUG] ==== Checking OpenCV installation files ====" && \
-    find /usr/local/lib -name "libopencv_core.so*" && \
-    find /usr/lib -name "libopencv_core.so*" && \
-    echo "[DEBUG] ==== Checking OpenCV pkg-config ====" && \
-    pkg-config --modversion opencv || echo "pkg-config opencv not found" && \
-    pkg-config --modversion opencv4 || echo "pkg-config opencv4 not found" && \
-    echo "[DEBUG] ==== Checking OpenCV compilation test ====" && \
-    echo '#include <opencv2/core.hpp>\n#include <iostream>\nint main(){std::cout<<CV_VERSION<<std::endl;return 0;}' > test_opencv.cpp && \
-    g++ -std=c++17 test_opencv.cpp -o test_opencv `pkg-config --cflags --libs opencv4` || g++ -std=c++17 test_opencv.cpp -o test_opencv `pkg-config --cflags --libs opencv` || echo "Failed to compile OpenCV test" && \
-    ./test_opencv || echo "OpenCV runtime test failed" && \
-    echo "[DEBUG] ==== Checking std::shared_mutex support ====" && \
-    echo '#include <shared_mutex>\nint main(){std::shared_mutex m; return 0;}' > test_mutex.cpp && \
-    g++ -std=c++17 test_mutex.cpp -o test_mutex && \
-    ./test_mutex && \
-    echo "[DEBUG] ==== Checking ldd on test_mutex ====" && \
-    ldd ./test_mutex && \
-    echo "[DEBUG] ==== Finished pre-build environment checks ===="
+# RUN echo "[DEBUG] ==== System environment ====" && \
+#     env && \
+#     echo "[DEBUG] ==== gcc version ====" && \
+#     gcc --version && \
+#     echo "[DEBUG] ==== g++ version ====" && \
+#     g++ --version && \
+#     echo "[DEBUG] ==== c++ version ====" && \
+#     c++ --version && \
+#     echo "[DEBUG] ==== which gcc / g++ / c++ ====" && \
+#     which gcc && which g++ && which c++ && \
+#     echo "[DEBUG] ==== update-alternatives status ====" && \
+#     update-alternatives --display gcc && \
+#     update-alternatives --display g++ && \
+#     echo "[DEBUG] ==== CMake version ====" && \
+#     cmake --version && \
+#     echo "[DEBUG] ==== Checking OpenCV installation files ====" && \
+#     find /usr/local/lib -name "libopencv_core.so*" && \
+#     find /usr/lib -name "libopencv_core.so*" && \
+#     echo "[DEBUG] ==== Checking OpenCV pkg-config ====" && \
+#     pkg-config --modversion opencv || echo "pkg-config opencv not found" && \
+#     pkg-config --modversion opencv4 || echo "pkg-config opencv4 not found" && \
+#     echo "[DEBUG] ==== Checking OpenCV compilation test ====" && \
+#     echo '#include <opencv2/core.hpp>\n#include <iostream>\nint main(){std::cout<<CV_VERSION<<std::endl;return 0;}' > test_opencv.cpp && \
+#     g++ -std=c++17 test_opencv.cpp -o test_opencv `pkg-config --cflags --libs opencv4` || g++ -std=c++17 test_opencv.cpp -o test_opencv `pkg-config --cflags --libs opencv` || echo "Failed to compile OpenCV test" && \
+#     ./test_opencv || echo "OpenCV runtime test failed" && \
+#     echo "[DEBUG] ==== Checking std::shared_mutex support ====" && \
+#     echo '#include <shared_mutex>\nint main(){std::shared_mutex m; return 0;}' > test_mutex.cpp && \
+#     g++ -std=c++17 test_mutex.cpp -o test_mutex && \
+#     ./test_mutex && \
+#     echo "[DEBUG] ==== Checking ldd on test_mutex ====" && \
+#     ldd ./test_mutex && \
+#     echo "[DEBUG] ==== Finished pre-build environment checks ===="
 
-# ========== END TROUBLESHOOTING BLOCK ==========
+# # ========== END TROUBLESHOOTING BLOCK ==========
 
 
 
@@ -302,7 +301,9 @@ RUN apt-get update && apt-get install -y \
 	libcgal-dev \ 
     libcgal-qt5-dev \
 	ros-kinetic-libg2o \
-	ros-kinetic-cv-bridge
+	ros-kinetic-cv-bridge \
+	libzmq3-dev
+
 
 
 # RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from GitHub ......"
@@ -333,19 +334,26 @@ RUN cd /root/orbslam3/SLAM_CARV && \
     ./build.sh && \
     chmod +x /root/orbslam3/SLAM_CARV/run.sh
 
+RUN nm -D /root/orbslam3/SLAM_CARV/lib/libORB_SLAM2_Pub.so | grep tinygltf
 
+ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
 
 RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
     && source /opt/ros/kinetic/setup.bash \
-	&& source /root/.bashrc \
-	&& export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
-	&& cd ~/orbslam3 \
-	&& cd SLAM_CARV \
-	&& chmod +x build_ros.sh \
-	&& ./build_ros.sh
+    && source /root/.bashrc \
+    && export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
+    && cd ~/orbslam3 \
+    && cd SLAM_CARV \
+    && chmod +x build_ros.sh \
+    && ./build_ros.sh \
+    && echo "[DEBUG] Running ldd on built Mono executable" \
+    && echo "[DEBUG] Locating Mono executable for ldd check" \
+	&& MONO_PATH=$(find /root/orbslam3/SLAM_CARV/Examples/ROS/ORB_CARV_Pub -name Mono -type f -executable | head -n 1) \
+	&& if [ -z "$MONO_PATH" ]; then echo "[ERROR] Mono executable not found for ldd check" && exit 1; else ldd "$MONO_PATH"; fi
+
 
 SHELL ["/bin/sh", "-c"]
 
