@@ -88,6 +88,7 @@ namespace ORB_SLAM2
 //        pangolin::Var<bool> menuShowLines("menu.Show Lines",true,true);
         pangolin::Var<bool> menuSaveCARV("menu.Save CARV",false,true);
         pangolin::Var<bool> menuReset("menu.Reset",false,false);
+        pangolin::Var<bool> menuSendModel("menu.Send Model",false,false);
         pangolin::Var<bool> menuLocalizationMode("menu.Localization Mode",false,true);
         // Define Camera Render Object (for view / scene browsing)
         pangolin::OpenGlRenderState s_map(
@@ -190,6 +191,13 @@ namespace ORB_SLAM2
             else if (!menuShowModel && menuShowTexture) {
                 mpModelDrawer->DrawFrame(mbRGB);
             }
+            
+            if(menuSendModel)
+            {
+                mpModelDrawer->SendModel(mbRGB);
+                menuSendModel = false; // reset the toggle so it sends only once per click for now
+            }
+
             if(menuSaveCARV)
             {
               mpSystem->mpModeler->writeToFile("chris_CARV_Files");

@@ -29,6 +29,7 @@ namespace ORB_SLAM2
         ModelDrawer();
 
         void DrawModel(bool bRGB);
+        void SendModel(bool bRGB);
         void DrawModelPoints();
         void DrawTriangles(pangolin::OpenGlMatrix &Twc);
         void DrawFrame(bool bRGB);
