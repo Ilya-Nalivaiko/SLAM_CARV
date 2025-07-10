@@ -334,8 +334,6 @@ RUN cd /root/orbslam3/SLAM_CARV && \
     ./build.sh && \
     chmod +x /root/orbslam3/SLAM_CARV/run.sh
 
-RUN nm -D /root/orbslam3/SLAM_CARV/lib/libORB_SLAM2_Pub.so | grep tinygltf
-
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
 # Set the default shell to bash
@@ -348,11 +346,7 @@ RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Exam
     && cd ~/orbslam3 \
     && cd SLAM_CARV \
     && chmod +x build_ros.sh \
-    && ./build_ros.sh \
-    && echo "[DEBUG] Running ldd on built Mono executable" \
-    && echo "[DEBUG] Locating Mono executable for ldd check" \
-	&& MONO_PATH=$(find /root/orbslam3/SLAM_CARV/Examples/ROS/ORB_CARV_Pub -name Mono -type f -executable | head -n 1) \
-	&& if [ -z "$MONO_PATH" ]; then echo "[ERROR] Mono executable not found for ldd check" && exit 1; else ldd "$MONO_PATH"; fi
+    && ./build_ros.sh
 
 
 SHELL ["/bin/sh", "-c"]

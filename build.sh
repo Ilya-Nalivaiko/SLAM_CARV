@@ -80,7 +80,7 @@ if [ $CMAKE_EXIT_CODE -ne 0 ]; then
 fi
 
 echo "[INFO] Building with make..."
-make -j$(nproc) | tee ../build.log
+make -j6 | tee ../build.log
 MAKE_EXIT_CODE=${PIPESTATUS[0]}
 if [ $MAKE_EXIT_CODE -ne 0 ]; then
     echo "[ERROR] Build failed. Check build.log."

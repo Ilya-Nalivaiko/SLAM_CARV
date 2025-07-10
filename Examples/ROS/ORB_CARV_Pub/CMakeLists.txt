@@ -68,6 +68,7 @@ set(LIBS
   ${PROJECT_SOURCE_DIR}/../../../Thirdparty/DBoW2/lib/libDBoW2.so
   ${PROJECT_SOURCE_DIR}/../../../Thirdparty/g2o/lib/libg2o.so
   ${PROJECT_SOURCE_DIR}/../../../lib/libORB_SLAM2_Pub.so
+  ${PROJECT_SOURCE_DIR}/../../../lib/libNetworkIntegrationLib.so
   /usr/local/lib/libopencv_core.so.3.4
   /usr/local/lib/libopencv_imgproc.so.3.4
   -lboost_system
