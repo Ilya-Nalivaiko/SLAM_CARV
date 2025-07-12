@@ -513,4 +513,14 @@ namespace ORB_SLAM2
         return mTrackedKeyPointsUn;
     }
 
+    void System::SetNetworkingInfo(const std::string& ownAddr, const std::string& unityAddr, ChunkCache* cache)
+    {
+        if (mpViewer) {
+            mpViewer->ownAddress = ownAddr;
+            mpViewer->unityAddress = unityAddr;
+            mpViewer->cachePtr = cache;
+        }
+    }
+
+
 } //namespace ORB_SLAM

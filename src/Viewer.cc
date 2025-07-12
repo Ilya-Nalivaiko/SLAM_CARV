@@ -192,11 +192,17 @@ namespace ORB_SLAM2
                 mpModelDrawer->DrawFrame(mbRGB);
             }
             
-            if(menuSendModel)
+            if (menuSendModel)
             {
-                mpModelDrawer->SendModel(mbRGB);
-                menuSendModel = false; // reset the toggle so it sends only once per click for now
+                if (cachePtr) {
+                    mpModelDrawer->drawer.SendModel(true, *cachePtr, ownAddress, unityAddress);
+                } else {
+                    std::cerr << "[Viewer] cachePtr not set\n";
+                }
+
+                menuSendModel = false;
             }
+
 
             if(menuSaveCARV)
             {

@@ -138,6 +138,9 @@ namespace ORB_SLAM2
 
         ModelDrawer* mpModelDrawer;
 
+        void SetNetworkingInfo(const std::string& ownAddr, const std::string& unityAddr, ChunkCache* cache);
+
+
     private:
 
         // Input sensor

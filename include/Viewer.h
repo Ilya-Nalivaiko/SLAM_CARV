@@ -29,6 +29,7 @@
 
 // carv include
 #include "Modeler/ModelDrawer.h"
+#include "Modeler/ChunkCache.h"
 
 #include <mutex>
 
@@ -63,6 +64,10 @@ namespace ORB_SLAM2
         bool isStopped();
 
         void Release();
+
+        std::string ownAddress;
+        std::string unityAddress;
+        ChunkCache* cachePtr = nullptr; // non-owning pointer
 
     private:
 

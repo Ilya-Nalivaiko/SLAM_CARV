@@ -30,7 +30,7 @@ namespace ORB_SLAM2
         ModelDrawer();
 
         void DrawModel(bool bRGB);
-        void SendModel(bool bRGB);
+        void SendModel(bool mbRGB, ChunkCache& cache, const std::string& ownAddress, const std::string& unityAddress);
         void DrawModelPoints();
         void DrawTriangles(pangolin::OpenGlMatrix &Twc);
         void DrawFrame(bool bRGB);
