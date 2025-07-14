@@ -353,6 +353,8 @@ RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Exam
 
 SHELL ["/bin/sh", "-c"]
 
+# change default location to orbslamcarv
+RUN echo "cd /root/orbslam3/SLAM_CARV" >> /root/.bashrc
 
 
 RUN echo "TESTING2"
