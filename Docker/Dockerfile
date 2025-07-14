@@ -336,6 +336,8 @@ RUN cd /root/orbslam3/SLAM_CARV && \
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
+RUN chmod +x /root/orbslam3/SLAM_CARV/camera/run.sh
+
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
 
@@ -350,29 +352,6 @@ RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Exam
 
 
 SHELL ["/bin/sh", "-c"]
-
-
-
-
-RUN echo "[Dockerfile Info] COPYING Networked Camera......"
-
-# Copy the compressed file to the target directory
-COPY Docker/camera.tar /root/apps/	
-
-# List the contents of the target directory to verify the file copy
-RUN ls -l /root/apps/
-
-# Extract the compressed file
-RUN tar -xvf /root/apps/camera.tar -C /root/apps/
-
-# Build the catkin stuff
-# RUN cd /root/apps/camera
-# RUN source /root/.bashrc
-# RUN catkin_make
-
-# chmod
-RUN chmod +x /root/apps/camera/run.sh
-
 
 
 
