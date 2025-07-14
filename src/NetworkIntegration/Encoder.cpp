@@ -220,6 +220,17 @@ std::string encodePointsTrisToGltfWithTex(
     const std::list<dlovi::Matrix>& tris,
     const std::vector<std::string>& textureUrls)
 {
+
+    //TODO there is an error in this function
+
+    // terminate called after throwing an instance of 'std::logic_error'
+    // what():  basic_string::_M_construct null not valid
+
+    // ./run.sh: line 3:   498 Aborted (core dumped)
+    // rosrun ORB_CARV_Pub Mono Vocabulary/ORBvoc.txt config_files/Logitech_c270_HD720p.yaml 192.168.1.75 8080 192.168.1.75 5555
+
+    std::cout << "[ePTtGwT_DEBUG] Function called" << std::endl;
+
     tinygltf::Model model;
     model.asset.version = "2.0";
     model.defaultScene = 0;
@@ -228,6 +239,8 @@ std::string encodePointsTrisToGltfWithTex(
     model.nodes.push_back({});
     model.nodes[0].mesh = 0;
     model.meshes.push_back({});
+
+    std::cout << "[ePTtGwT_DEBUG] model instantiated" << std::endl;
 
     // Flatten vertices
     std::vector<float> pos;
@@ -245,6 +258,8 @@ std::string encodePointsTrisToGltfWithTex(
         idx.push_back(static_cast<unsigned short>(t(2)));
     }
 
+    std::cout << "[ePTtGwT_DEBUG] data flattened" << std::endl;
+
     // Construct buffer
     size_t offsetPos = 0;
     size_t offsetIdx = pos.size() * sizeof(float);
@@ -261,11 +276,15 @@ std::string encodePointsTrisToGltfWithTex(
     model.bufferViews.push_back(bvPos);
     model.bufferViews.push_back(bvIdx);
 
+    std::cout << "[ePTtGwT_DEBUG] buffers" << std::endl;
+
     // Accessors
     tinygltf::Accessor ap{0, 0, TINYGLTF_COMPONENT_TYPE_FLOAT, static_cast<int>(pos.size() / 3), TINYGLTF_TYPE_VEC3};
     tinygltf::Accessor ai{1, 0, TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT, static_cast<int>(idx.size()), TINYGLTF_TYPE_SCALAR};
     model.accessors.push_back(ap);
     model.accessors.push_back(ai);
+
+    std::cout << "[ePTtGwT_DEBUG] accessors" << std::endl;
 
     // Textures
     if (!textureUrls.empty()) {
@@ -276,6 +295,8 @@ std::string encodePointsTrisToGltfWithTex(
         tinygltf::Material mat; mat.pbrMetallicRoughness.baseColorTexture.index = 0; model.materials.push_back(std::move(mat));
     }
 
+    std::cout << "[ePTtGwT_DEBUG] tex" << std::endl;
+
     // Primitive
     tinygltf::Primitive prim;
     prim.attributes["POSITION"] = 0;
@@ -284,11 +305,16 @@ std::string encodePointsTrisToGltfWithTex(
     if (!textureUrls.empty()) prim.material = 0;
     model.meshes[0].primitives.push_back(prim);
 
+    std::cout << "[ePTtGwT_DEBUG] prim" << std::endl;
+
     // Serialize
     tinygltf::TinyGLTF gltfCtx;
     std::stringstream ss;
     if (!gltfCtx.WriteGltfSceneToStream(&model, ss, false, false)) {
         throw std::runtime_error("Failed to write glTF to string stream.");
     }
+
+    std::cout << "[ePTtGwT_DEBUG] serialized" << std::endl;
+
     return ss.str();
 }
