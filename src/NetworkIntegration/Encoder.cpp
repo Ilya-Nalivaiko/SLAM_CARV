@@ -270,17 +270,46 @@ std::string encodePointsTrisToGltfWithTex(
     memcpy(rawBuf.data.data() + offsetIdx, idx.data(), idx.size() * sizeof(unsigned short));
     model.buffers.push_back(std::move(rawBuf));
 
+    std::cout << "[ePTtGwT_DEBUG] buffers constructed" << std::endl;
+
     // BufferViews
-    tinygltf::BufferView bvPos{0, offsetPos, pos.size() * sizeof(float), TINYGLTF_TARGET_ARRAY_BUFFER};
-    tinygltf::BufferView bvIdx{0, offsetIdx, idx.size() * sizeof(unsigned short), TINYGLTF_TARGET_ELEMENT_ARRAY_BUFFER};
+    if (pos.empty() || idx.empty()) {
+        std::cerr << "[ePTtGwT] Empty position or index array — cannot encode GLTF.\n";
+        return "{}";
+    }
+
+    tinygltf::BufferView bvPos;
+    bvPos.buffer = 0;
+    bvPos.byteOffset = offsetPos;
+    bvPos.byteLength = pos.size() * sizeof(float);
+    bvPos.target = TINYGLTF_TARGET_ARRAY_BUFFER;
+
+    tinygltf::BufferView bvIdx;
+    bvIdx.buffer = 0;
+    bvIdx.byteOffset = offsetIdx;
+    bvIdx.byteLength = idx.size() * sizeof(unsigned short);
+    bvIdx.target = TINYGLTF_TARGET_ELEMENT_ARRAY_BUFFER;
+
     model.bufferViews.push_back(bvPos);
     model.bufferViews.push_back(bvIdx);
 
-    std::cout << "[ePTtGwT_DEBUG] buffers" << std::endl;
+    std::cout << "[ePTtGwT_DEBUG] buffers populated" << std::endl;
 
     // Accessors
-    tinygltf::Accessor ap{0, 0, TINYGLTF_COMPONENT_TYPE_FLOAT, static_cast<int>(pos.size() / 3), TINYGLTF_TYPE_VEC3};
-    tinygltf::Accessor ai{1, 0, TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT, static_cast<int>(idx.size()), TINYGLTF_TYPE_SCALAR};
+    tinygltf::Accessor ap;
+    ap.bufferView = 0;
+    ap.byteOffset = 0;
+    ap.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
+    ap.count = static_cast<int>(pos.size() / 3);
+    ap.type = TINYGLTF_TYPE_VEC3;
+
+    tinygltf::Accessor ai;
+    ai.bufferView = 1;
+    ai.byteOffset = 0;
+    ai.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT;
+    ai.count = static_cast<int>(idx.size());
+    ai.type = TINYGLTF_TYPE_SCALAR;
+
     model.accessors.push_back(ap);
     model.accessors.push_back(ai);
 
