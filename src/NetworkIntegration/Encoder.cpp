@@ -8,7 +8,6 @@
 #define TINYGLTF_ENABLE_FS   // <-- enable file system utilities
 
 #include "Encoder.h"
-#include "Modeler/Matrix.h"
 
 // Shared mesh encoding logic (helper function)
 // Encodes the geometry data [chunk] into gltf file [model]

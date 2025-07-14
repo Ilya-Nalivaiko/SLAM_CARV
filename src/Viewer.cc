@@ -195,7 +195,7 @@ namespace ORB_SLAM2
             if (menuSendModel)
             {
                 if (cachePtr) {
-                    mpModelDrawer->drawer.SendModel(true, *cachePtr, ownAddress, unityAddress);
+                    mpModelDrawer->SendModel(true, *cachePtr, ownAddress, unityAddress);
                 } else {
                     std::cerr << "[Viewer] cachePtr not set\n";
                 }

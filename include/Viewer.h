@@ -29,7 +29,7 @@
 
 // carv include
 #include "Modeler/ModelDrawer.h"
-#include "Modeler/ChunkCache.h"
+#include "NetworkIntegration/ChunkCache.h"
 
 #include <mutex>
 
