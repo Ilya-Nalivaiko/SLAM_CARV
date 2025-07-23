@@ -5,13 +5,13 @@ MAINTAINER Islam A. Ali <islam.a.mustafa@gmail.com>
 
 # ------------------------------------------------------------------------------------------
 # Definitions
-ENV OPENCV_VERSION 3.4.1
-ENV OPENCV_DOWNLOAD_URL https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip
-ENV OpenCV_DIR opencv-$OPENCV_VERSION
-ENV EIGEN_VERSION 3.3.2
-ENV EIGEN_DOWNLOAD_URL http://bitbucket.org/eigen/eigen/get/$EIGEN_VERSION.tar.gz
-ENV PANGOLIN_VERSION 0.6
-ENV PANGOLIN_DOWNLOAD_PATH https://github.com/stevenlovegrove/Pangolin/archive/refs/tags/v$PANGOLIN_VERSION.zip
+ENV OPENCV_VERSION=3.4.1
+ENV OPENCV_DOWNLOAD_URL=https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip
+ENV OpenCV_DIR=opencv-$OPENCV_VERSION
+ENV EIGEN_VERSION=3.3.2
+ENV EIGEN_DOWNLOAD_URL=http://bitbucket.org/eigen/eigen/get/$EIGEN_VERSION.tar.gz
+ENV PANGOLIN_VERSION=0.6
+ENV PANGOLIN_DOWNLOAD_PATH=https://github.com/stevenlovegrove/Pangolin/archive/refs/tags/v$PANGOLIN_VERSION.zip
 
 ENV TZ=Europe/Minsk
 ENV CMAKE_PREFIX_PATH=/opt/ros/kinetic/share
@@ -27,17 +27,25 @@ RUN apt-get update && \
     software-properties-common \
 	nano
 
-# Add GCC 7 repository and install GCC 7
+# Add GCC 8 repository and install GCC 8
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && \
-    apt-get install -y gcc-7 g++-7 && \
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 60
+    apt-get install -y gcc-8 g++-8 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 80 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 80
 
-# Set GCC 7 as the default compiler
-RUN update-alternatives --set gcc /usr/bin/gcc-7 && \
-    update-alternatives --set g++ /usr/bin/g++-7
+# Set GCC 8 as the default compiler
+RUN update-alternatives --set gcc /usr/bin/gcc-8 && \
+    update-alternatives --set g++ /usr/bin/g++-8
+RUN export CC=/usr/bin/gcc-8
+RUN export CXX=/usr/bin/g++-8
 
+# need newer cmake too
+RUN apt-get remove -y cmake
+RUN apt-get update && apt-get install -y wget
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.18.6/cmake-3.18.6-Linux-x86_64.sh && \
+    chmod +x cmake-3.18.6-Linux-x86_64.sh && \
+    ./cmake-3.18.6-Linux-x86_64.sh --skip-license --prefix=/usr/local
 
 # ------------------------------------------------------------------------------------------
 # [1] General Dependencies
@@ -211,6 +219,77 @@ RUN apt-get update && \
 # [7] Install flir camera ros driver and launch files
 
 # ------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+# # ========== BEGIN TROUBLESHOOTING BLOCK ==========
+
+# RUN echo "[DEBUG] ==== System environment ====" && \
+#     env && \
+#     echo "[DEBUG] ==== gcc version ====" && \
+#     gcc --version && \
+#     echo "[DEBUG] ==== g++ version ====" && \
+#     g++ --version && \
+#     echo "[DEBUG] ==== c++ version ====" && \
+#     c++ --version && \
+#     echo "[DEBUG] ==== which gcc / g++ / c++ ====" && \
+#     which gcc && which g++ && which c++ && \
+#     echo "[DEBUG] ==== update-alternatives status ====" && \
+#     update-alternatives --display gcc && \
+#     update-alternatives --display g++ && \
+#     echo "[DEBUG] ==== CMake version ====" && \
+#     cmake --version && \
+#     echo "[DEBUG] ==== Checking OpenCV installation files ====" && \
+#     find /usr/local/lib -name "libopencv_core.so*" && \
+#     find /usr/lib -name "libopencv_core.so*" && \
+#     echo "[DEBUG] ==== Checking OpenCV pkg-config ====" && \
+#     pkg-config --modversion opencv || echo "pkg-config opencv not found" && \
+#     pkg-config --modversion opencv4 || echo "pkg-config opencv4 not found" && \
+#     echo "[DEBUG] ==== Checking OpenCV compilation test ====" && \
+#     echo '#include <opencv2/core.hpp>\n#include <iostream>\nint main(){std::cout<<CV_VERSION<<std::endl;return 0;}' > test_opencv.cpp && \
+#     g++ -std=c++17 test_opencv.cpp -o test_opencv `pkg-config --cflags --libs opencv4` || g++ -std=c++17 test_opencv.cpp -o test_opencv `pkg-config --cflags --libs opencv` || echo "Failed to compile OpenCV test" && \
+#     ./test_opencv || echo "OpenCV runtime test failed" && \
+#     echo "[DEBUG] ==== Checking std::shared_mutex support ====" && \
+#     echo '#include <shared_mutex>\nint main(){std::shared_mutex m; return 0;}' > test_mutex.cpp && \
+#     g++ -std=c++17 test_mutex.cpp -o test_mutex && \
+#     ./test_mutex && \
+#     echo "[DEBUG] ==== Checking ldd on test_mutex ====" && \
+#     ldd ./test_mutex && \
+#     echo "[DEBUG] ==== Finished pre-build environment checks ===="
+
+# # ========== END TROUBLESHOOTING BLOCK ==========
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # [8] Install SLAM CARV
 
 RUN apt-get update && apt-get install -y \
@@ -222,55 +301,60 @@ RUN apt-get update && apt-get install -y \
 	libcgal-dev \ 
     libcgal-qt5-dev \
 	ros-kinetic-libg2o \
-	ros-kinetic-cv-bridge
+	ros-kinetic-cv-bridge \
+	libzmq3-dev
 
 
-RUN echo "[Dockerfile Info] Installing ORB-SLAM3 ......"
-RUN mkdir -p ~/orbslam3 && \
-	cd ~/orbslam3 && \
-	git clone --depth 1 https://github.com/Ilya-Nalivaiko/SLAM_CARV.git && \
-	cd SLAM_CARV && \
-	chmod +x build.sh && \
-	./build.sh && \
-	chmod +x /root/orbslam3/SLAM_CARV/run.sh
+
+# RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from GitHub ......"
+# RUN mkdir -p ~/orbslam3 && \
+# 	cd ~/orbslam3 && \
+# 	git clone --depth 1 https://github.com/Ilya-Nalivaiko/SLAM_CARV.git && \
+# 	cd SLAM_CARV && \
+# 	chmod +x build.sh && \
+# 	./build.sh && \
+# 	chmod +x /root/orbslam3/SLAM_CARV/run.sh
+
+RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from local source ......"
+
+RUN mkdir -p /root/orbslam3/SLAM_CARV
+COPY . /root/orbslam3/SLAM_CARV
+RUN echo "Recursive listing to confirm contents:" && find /root/orbslam3/SLAM_CARV
+
+RUN cd /root/orbslam3/SLAM_CARV/Thirdparty/DBoW2 && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j$(nproc)
+RUN ls /root/orbslam3/SLAM_CARV/Thirdparty/DBoW2/lib/
+
+RUN cd /root/orbslam3/SLAM_CARV && \
+	rm -rf build && \
+    chmod +x build.sh && \
+    ./build.sh && \
+    chmod +x /root/orbslam3/SLAM_CARV/run.sh
+
+ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
+
+RUN chmod +x /root/orbslam3/SLAM_CARV/camera/run.sh
 
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
 
 RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
     && source /opt/ros/kinetic/setup.bash \
-	&& source /root/.bashrc \
-	&& export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
-	&& cd ~/orbslam3 \
-	&& cd SLAM_CARV \
-	&& chmod +x build_ros.sh \
-	&& ./build_ros.sh
+    && source /root/.bashrc \
+    && export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
+    && cd ~/orbslam3 \
+    && cd SLAM_CARV \
+    && chmod +x build_ros.sh \
+    && ./build_ros.sh
+
 
 SHELL ["/bin/sh", "-c"]
 
-
-
-
-RUN echo "[Dockerfile Info] COPYING Networked Camera......"
-
-# Copy the compressed file to the target directory
-COPY camera.tar /root/apps/	
-
-# List the contents of the target directory to verify the file copy
-RUN ls -l /root/apps/
-
-# Extract the compressed file
-RUN tar -xvf /root/apps/camera.tar -C /root/apps/
-
-# Build the catkin stuff
-# RUN cd /root/apps/camera
-# RUN source /root/.bashrc
-# RUN catkin_make
-
-# chmod
-RUN chmod +x /root/apps/camera/run.sh
-
-
+# change default location to orbslamcarv
+RUN echo "cd /root/orbslam3/SLAM_CARV" >> /root/.bashrc
 
 
 RUN echo "TESTING2"
@@ -289,5 +373,5 @@ ENV \
   X11VNC_PASSWORD="password"
 RUN apt-get update -y
 RUN apt-get install -y xvfb x11vnc fluxbox
-ADD ./entrypoint.sh /opt/entrypoint.sh
+ADD ./Docker/entrypoint.sh /opt/entrypoint.sh
 ENTRYPOINT /opt/entrypoint.sh

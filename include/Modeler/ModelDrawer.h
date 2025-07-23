@@ -16,6 +16,7 @@
 #include "Modeler/Matrix.h"
 #include "Modeler/Modeler.h"
 #include "Modeler/TextureFrame.h"
+#include "NetworkIntegration/ChunkCache.h"
 
 namespace ORB_SLAM2
 {
@@ -29,6 +30,7 @@ namespace ORB_SLAM2
         ModelDrawer();
 
         void DrawModel(bool bRGB);
+        void SendModel(bool mbRGB, ChunkCache& cache, const std::string& ownAddress, const std::string& unityAddress);
         void DrawModelPoints();
         void DrawTriangles(pangolin::OpenGlMatrix &Twc);
         void DrawFrame(bool bRGB);
@@ -46,9 +48,8 @@ namespace ORB_SLAM2
 
         void SetModeler(Modeler* pModeler);
         Modeler* mpModeler;
+
     private:
-
-
 
         bool mbModelUpdateRequested;
         bool mbModelUpdateDone;
@@ -61,3 +62,4 @@ namespace ORB_SLAM2
 } //namespace ORB_SLAM
 
 #endif //__MODELDRAWER_H
+

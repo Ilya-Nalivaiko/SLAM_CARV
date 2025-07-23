@@ -88,6 +88,7 @@ namespace ORB_SLAM2
 //        pangolin::Var<bool> menuShowLines("menu.Show Lines",true,true);
         pangolin::Var<bool> menuSaveCARV("menu.Save CARV",false,true);
         pangolin::Var<bool> menuReset("menu.Reset",false,false);
+        pangolin::Var<bool> menuSendModel("menu.Send Model",false,false);
         pangolin::Var<bool> menuLocalizationMode("menu.Localization Mode",false,true);
         // Define Camera Render Object (for view / scene browsing)
         pangolin::OpenGlRenderState s_map(
@@ -190,6 +191,19 @@ namespace ORB_SLAM2
             else if (!menuShowModel && menuShowTexture) {
                 mpModelDrawer->DrawFrame(mbRGB);
             }
+            
+            if (menuSendModel)
+            {
+                if (cachePtr) {
+                    mpModelDrawer->SendModel(true, *cachePtr, ownAddress, unityAddress);
+                } else {
+                    std::cerr << "[Viewer] cachePtr not set\n";
+                }
+
+                menuSendModel = false;
+            }
+
+
             if(menuSaveCARV)
             {
               mpSystem->mpModeler->writeToFile("chris_CARV_Files");
