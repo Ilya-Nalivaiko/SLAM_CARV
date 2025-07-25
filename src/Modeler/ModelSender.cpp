@@ -4,6 +4,7 @@
 #include "Modeler/ModelDrawer.h"
 #include "NetworkIntegration/Encoder.h"
 #include "NetworkIntegration/Notifier.h"
+#include "Modeler/TextureFrame.h"
 #include <vector>
 #include <list>
 #include <utility>
@@ -12,13 +13,17 @@
 
 namespace ORB_SLAM2
 {
+    // Mirrors DrawModel, but sends it to unity instead
     void ModelDrawer::SendModel(bool mbRGB, ChunkCache& cache, const std::string& ownAddress, const std::string& unityAddress)
     {
         std::cout << "[SendModel_DEBUG] Send request recieved" << std::endl;
         int chunkId = 1337; // Replace or generate appropriately
 
-        int numKFs = 1;
-        std::vector<std::pair<cv::Mat, TextureFrame>> imAndTexFrame = mpModeler->GetTextures(numKFs);
+
+        // ===== get images and points from model ===== 
+
+        int numKFs = 10;
+        std::vector<std::pair<cv::Mat, ORB_SLAM2::TextureFrame>> imAndTexFrame = mpModeler->GetTextures(numKFs);
 
         if (imAndTexFrame.size() < numKFs) {
             std::cerr << "[SendModel] Not enough keyframes for texture retrieval." << std::endl;
@@ -27,29 +32,77 @@ namespace ORB_SLAM2
 
         UpdateModel();
 
-        std::cout << "[SendModel_DEBUG] Model Updated" << std::endl;
-
         std::vector<dlovi::Matrix>& points = GetPoints();
         std::list<dlovi::Matrix>& tris = GetTris();
 
-        // Convert texture images to filenames and URLs
+
+
+
+        // ===== Convert texture images to SVD, add filenames and URLs ===== 
+
         std::vector<std::string> textureUrls;
         std::unordered_map<std::string, cv::Mat> textureMap;
+        nlohmann::json extras;  // glTF extras block
 
-        std::cout << "[SendModel_DEBUG] Images converted" << std::endl;
+        // Step 1: Build image matrix and poses
+        cv::Mat imageMatrix;
+        cv::Size imageSize;
+        if (!BuildGrayscaleImageMatrix(imAndTexFrame, imageMatrix, imageSize)) {
+            std::cerr << "[SendModel] Failed to build grayscale image matrix.\n";
+            return;
+        }
+        nlohmann::json poseJson = BuildPoseJson(imAndTexFrame);
 
-        for (size_t i = 0; i < imAndTexFrame.size(); ++i) {
-            std::string filename = "tex_" + std::to_string(i) + ".png";
-            textureUrls.push_back("http://" + ownAddress + "/texture/" + std::to_string(chunkId) + "/" + filename);
-            textureMap[filename] = imAndTexFrame[i].first;
+        // Step 2: Perform SVD
+        std::vector<cv::Mat> basisImages;
+        cv::Mat meanImage;
+        cv::Mat coefficients;
+        if (!PerformSVDCompression(imageMatrix, /* auto-k */ 0, basisImages, meanImage, coefficients)) {
+            std::cerr << "[SendModel] SVD compression failed.\n";
+            return;
+        }
+        std::cout << "[SendModel_DEBUG] Textures compressed" << std::endl;
+
+        // Step 3: Package into memory and create filenames/URLs
+        std::string baseUrl = "http://" + ownAddress + "/texture/" + std::to_string(chunkId) + "/";
+
+        // Add mean
+        std::string meanFilename = "mean.png";
+        textureUrls.push_back(baseUrl + meanFilename);
+        textureMap[meanFilename] = meanImage;
+
+        // Add basis images
+        for (size_t i = 0; i < basisImages.size(); ++i) {
+            std::string basisFilename = "basis_" + std::to_string(i) + ".png";
+            textureUrls.push_back(baseUrl + basisFilename);
+            textureMap[basisFilename] = basisImages[i];
         }
 
-        std::cout << "[SendModel_DEBUG] Texture map created" << std::endl;
+        // Add coefficients
+        std::string coeffFilename = "coefficients.exr";
+        textureUrls.push_back(baseUrl + coeffFilename);
+        textureMap[coeffFilename] = coefficients;
 
-        // Encode geometry + texture URLs to GLTF
-        std::string gltf = encodePointsTrisToGltfWithTex(points, tris, textureUrls);
+        // Step 4: Build extras JSON
+        extras["svd"] = {
+            {"mean", meanFilename},
+            {"basis", nlohmann::json::array()},
+            {"coefficients", coeffFilename},
+            {"coefficient_shape", {coefficients.rows, coefficients.cols}},
+            {"original_poses", poseJson}
+        };
+        for (size_t i = 0; i < basisImages.size(); ++i) {
+            extras["svd"]["basis"].push_back("basis_" + std::to_string(i) + ".png");
+        }
+
+        // Step 5: Encode with extras
+        std::string gltf = encodeToGltf(points, tris, textureUrls, extras);
 
         std::cout << "[SendModel_DEBUG] GLTF encoded" << std::endl;
+
+
+
+        // ===== add given GLTF with corresponding images to HTTP cache and send update ===== 
 
         // Assemble GltfChunk
         auto chunk = std::make_shared<GltfChunk>();
