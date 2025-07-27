@@ -14,7 +14,7 @@ def main():
     bridge = CvBridge()
 
     for poss in [72, 109, 110]: # possibilities
-        cap = cv2.VideoCapture(f"http://192.168.1.{poss}:4747/video")
+        cap = cv2.VideoCapture("http://192.168.1.{0}:4747/video".format(poss))
         if not cap.isOpened():
             continue
         else:
