@@ -42,3 +42,10 @@ bool BuildGrayscaleImageMatrix(
     const std::vector<std::pair<cv::Mat, ORB_SLAM2::TextureFrame>>& rgbTexFrames,
     cv::Mat& outMatrix,
     cv::Size& outImageSize);
+void PostprocessSVDOutput(
+    std::vector<cv::Mat>& basisImages,  // [flattened float32], modified in-place
+    cv::Mat& meanImage,                 // [flattened float32], modified in-place
+    cv::Mat& coefficients,              // [k x N float32], modified in-place
+    int imageHeight,
+    int imageWidth
+);

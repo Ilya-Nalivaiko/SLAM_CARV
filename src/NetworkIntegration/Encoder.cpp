@@ -499,3 +499,46 @@ bool PerformSVDCompression(
 
     return true;
 }
+
+// Raw SVD output is unusable as a Unity texture (or even an image), needs to be processed a bit
+void PostprocessSVDOutput(
+    std::vector<cv::Mat>& basisImages,  // [flattened float32], modified in-place
+    cv::Mat& meanImage,                 // [flattened float32], modified in-place
+    cv::Mat& coefficients,              // [k x N float32], modified in-place
+    int imageHeight,
+    int imageWidth
+)
+{
+    // === Compute max absolute value across all basis vectors ===
+    float maxAbs = 0.0f;
+    for (const auto& basis : basisImages) {
+        double minVal, maxVal;
+        cv::minMaxLoc(cv::abs(basis), &minVal, &maxVal);
+        maxAbs = std::max(maxAbs, static_cast<float>(maxVal));
+    }
+
+    if (maxAbs < 1e-6f) {
+        std::cerr << "[PostprocessSVD] Warning: maxAbs nearly zero — skipping normalization.\n";
+        maxAbs = 1.0f;
+    }
+
+    float basisScale = 127.0f / maxAbs;
+    float coeffScale = maxAbs / 127.0f;
+
+    // === Normalize basis vectors and reshape ===
+    for (auto& basis : basisImages) {
+        basis = basis * basisScale;                       // float32 in [-127,127]
+        basis = basis.reshape(1, imageHeight);            // reshape to H×W
+        basis += 127.0f;                                  // shift to [0,254]
+        cv::threshold(basis, basis, 255.0, 255.0, cv::THRESH_TRUNC); // clip
+        basis.convertTo(basis, CV_8U);                    // convert in-place to uint8
+    }
+
+    // === Normalize and reshape mean image for viewing ===
+    meanImage = meanImage.reshape(1, imageHeight);        // float32 [H×W]
+    cv::normalize(meanImage, meanImage, 0.0, 255.0, cv::NORM_MINMAX);
+    meanImage.convertTo(meanImage, CV_8U);                // uint8 [H×W]
+
+    // === Rescale coefficients to match new basis ===
+    coefficients *= coeffScale;                           // float32 [k x N]
+}

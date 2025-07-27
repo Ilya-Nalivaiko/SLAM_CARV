@@ -61,6 +61,8 @@ namespace ORB_SLAM2
             std::cerr << "[SendModel] SVD compression failed.\n";
             return;
         }
+        PostprocessSVDOutput(basisImages, meanImage, coefficients, imageSize.height, imageSize.width);
+
         std::cout << "[SendModel_DEBUG] Textures compressed" << std::endl;
 
         // Step 3: Package into memory and create filenames/URLs
