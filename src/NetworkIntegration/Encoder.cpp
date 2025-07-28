@@ -14,7 +14,7 @@ std::string encodeToGltf(
     const std::vector<dlovi::Matrix>& points,
     const std::list<dlovi::Matrix>& tris,
     const std::vector<std::string>& textureUrls,
-    const nlohmann::json& extras)
+    const tinygltf::Value::Object& extras)
 {
 
     tinygltf::Model model;
@@ -112,19 +112,19 @@ std::string encodeToGltf(
     if (!textureUrls.empty()) prim.material = 0;
     model.meshes[0].primitives.push_back(prim);
 
+    // Attach extras if provided
+    if (!extras.empty()) {
+
+        //both are jsons but god forbid they be compatible
+        model.extras = tinygltf::Value(extras);
+
+    }
+
     // Serialize
     tinygltf::TinyGLTF gltfCtx;
     std::stringstream ss;
     if (!gltfCtx.WriteGltfSceneToStream(&model, ss, false, false)) {
         throw std::runtime_error("Failed to write glTF to string stream.");
-    }
-
-    // Attach extras if provided
-    if (!extras.is_null()) {
-
-        //both are jsons but god forbid they be compatible
-        model.extras = tinygltf::Value(extras.dump());
-
     }
 
     std::cout << "[Encoder_GLTF] serialized" << std::endl;
@@ -168,53 +168,52 @@ bool BuildGrayscaleImageMatrix(
 }
 
 
-// Convert per-image pose information to JSON
-nlohmann::json BuildPoseJson(const std::vector<std::pair<cv::Mat, ORB_SLAM2::TextureFrame>>& rgbTexFrames)
-{
-    nlohmann::json poseJson;
 
-    for (const auto& [image, tex] : rgbTexFrames) {
-        std::string id = std::to_string(tex.mFrameID);
+//helper
+tinygltf::Value makeArray(const std::vector<double>& vals) {
+    tinygltf::Value::Array arr;
+    arr.reserve(vals.size());
+    for (double v : vals) {
+        arr.push_back(tinygltf::Value(v));
+    }
+    return tinygltf::Value(arr);
+}
+
+
+// Convert per-image pose information to JSON
+tinygltf::Value BuildPoseExtras(
+    const std::vector<std::pair<cv::Mat, ORB_SLAM2::TextureFrame>>& rgbTexFrames)
+{
+    tinygltf::Value::Object poseMap;
+
+    for (size_t i = 0; i < rgbTexFrames.size(); ++i) {
+        const auto& tex = rgbTexFrames[i].second;
+        std::string id = std::to_string(i); // use index, not mFrameID
 
         const cv::Mat& R = tex.mRcw;
         const cv::Mat& t = tex.mtcw;
 
-        std::vector<std::vector<double>> extrinsics = {
-            {
-                static_cast<double>(R.at<float>(0,0)),
-                static_cast<double>(R.at<float>(0,1)),
-                static_cast<double>(R.at<float>(0,2)),
-                static_cast<double>(t.at<float>(0))
-            },
-            {
-                static_cast<double>(R.at<float>(1,0)),
-                static_cast<double>(R.at<float>(1,1)),
-                static_cast<double>(R.at<float>(1,2)),
-                static_cast<double>(t.at<float>(1))
-            },
-            {
-                static_cast<double>(R.at<float>(2,0)),
-                static_cast<double>(R.at<float>(2,1)),
-                static_cast<double>(R.at<float>(2,2)),
-                static_cast<double>(t.at<float>(2))
-            },
-            {0.0, 0.0, 0.0, 1.0}
-        };
+        // Build extrinsics as array-of-arrays
+        tinygltf::Value::Array extrinsics;
+        extrinsics.push_back(makeArray({R.at<float>(0,0), R.at<float>(0,1), R.at<float>(0,2), t.at<float>(0)}));
+        extrinsics.push_back(makeArray({R.at<float>(1,0), R.at<float>(1,1), R.at<float>(1,2), t.at<float>(1)}));
+        extrinsics.push_back(makeArray({R.at<float>(2,0), R.at<float>(2,1), R.at<float>(2,2), t.at<float>(2)}));
+        extrinsics.push_back(makeArray({0.0, 0.0, 0.0, 1.0}));
 
-        std::vector<std::vector<double>> intrinsics = {
-            {static_cast<double>(tex.mfx), 0.0, static_cast<double>(tex.mcx)},
-            {0.0, static_cast<double>(tex.mfy), static_cast<double>(tex.mcy)},
-            {0.0, 0.0, 1.0}
-        };
+        // Build intrinsics as array-of-arrays  
+        tinygltf::Value::Array intrinsics;
+        intrinsics.push_back(makeArray({tex.mfx, 0.0, tex.mcx}));
+        intrinsics.push_back(makeArray({0.0, tex.mfy, tex.mcy}));
+        intrinsics.push_back(makeArray({0.0, 0.0, 1.0}));
 
+        tinygltf::Value::Object frameInfo;
+        frameInfo["extrinsics"] = tinygltf::Value(extrinsics);
+        frameInfo["intrinsics"] = tinygltf::Value(intrinsics);
 
-        poseJson[id] = {
-            {"extrinsics", extrinsics},
-            {"intrinsics", intrinsics}
-        };
+        poseMap[id] = tinygltf::Value(frameInfo);
     }
 
-    return poseJson;
+    return tinygltf::Value(poseMap);
 }
 
 

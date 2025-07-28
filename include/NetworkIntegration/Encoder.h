@@ -26,7 +26,7 @@ std::string encodeToGltf(
     const std::vector<dlovi::Matrix>& points,
     const std::list<dlovi::Matrix>& tris,
     const std::vector<std::string>& textureUrls,
-    const nlohmann::json& extras);
+    const tinygltf::Value::Object& extras);
 bool PerformSVDCompression(
     const cv::Mat& imageMatrix,             // [H*W x N], CV_32F
     int maxComponents,                      // if <= 0, auto-select to preserve 95% energy
@@ -34,7 +34,7 @@ bool PerformSVDCompression(
     cv::Mat& meanImageOut,                  // output mean image (grayscale)
     cv::Mat& coefficientMatrixOut           // output coefficients [k x N], CV_32F
 );
-nlohmann::json BuildPoseJson(const std::vector<std::pair<cv::Mat, ORB_SLAM2::TextureFrame>>& rgbTexFrames);
+tinygltf::Value BuildPoseExtras(const std::vector<std::pair<cv::Mat, ORB_SLAM2::TextureFrame>>& rgbTexFrames);
 bool BuildGrayscaleImageMatrix(
     const std::vector<std::pair<cv::Mat, ORB_SLAM2::TextureFrame>>& rgbTexFrames,
     cv::Mat& outMatrix,

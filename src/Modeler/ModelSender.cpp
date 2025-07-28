@@ -42,7 +42,6 @@ namespace ORB_SLAM2
 
         std::vector<std::string> textureUrls;
         std::unordered_map<std::string, cv::Mat> textureMap;
-        nlohmann::json extras;  // glTF extras block
 
         // Step 1: Build image matrix and poses
         cv::Mat imageMatrix;
@@ -51,7 +50,7 @@ namespace ORB_SLAM2
             std::cerr << "[SendModel] Failed to build grayscale image matrix.\n";
             return;
         }
-        nlohmann::json poseJson = BuildPoseJson(imAndTexFrame);
+        tinygltf::Value originalPoses = BuildPoseExtras(imAndTexFrame);
 
         // Step 2: Perform SVD
         std::vector<cv::Mat> basisImages;
@@ -86,16 +85,25 @@ namespace ORB_SLAM2
         textureMap[coeffFilename] = coefficients;
 
         // Step 4: Build extras JSON
-        extras["svd"] = {
-            {"mean", meanFilename},
-            {"basis", nlohmann::json::array()},
-            {"coefficients", coeffFilename},
-            {"coefficient_shape", {coefficients.rows, coefficients.cols}},
-            {"original_poses", poseJson}
-        };
-        for (size_t i = 0; i < basisImages.size(); ++i) {
-            extras["svd"]["basis"].push_back("basis_" + std::to_string(i) + ".png");
+        tinygltf::Value::Object svd;
+        svd["mean"] = tinygltf::Value(meanFilename);
+        svd["coefficients"] = tinygltf::Value(coeffFilename);
+        {
+            tinygltf::Value::Array coeffShape;
+            coeffShape.push_back(tinygltf::Value(static_cast<int>(coefficients.rows)));
+            coeffShape.push_back(tinygltf::Value(static_cast<int>(coefficients.cols)));
+            svd["coefficient_shape"] = tinygltf::Value(coeffShape);
         }
+        {
+            tinygltf::Value::Array basisArray;
+            for (size_t i = 0; i < basisImages.size(); ++i) {
+                basisArray.push_back(tinygltf::Value("basis_" + std::to_string(i) + ".png"));
+            }
+            svd["basis"] = tinygltf::Value(basisArray);
+        }
+        svd["original_poses"] = BuildPoseExtras(imAndTexFrame);
+        tinygltf::Value::Object extras;
+        extras["svd"] = tinygltf::Value(svd);
 
         // Step 5: Encode with extras
         std::string gltf = encodeToGltf(points, tris, textureUrls, extras);
