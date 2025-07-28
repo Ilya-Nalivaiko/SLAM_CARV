@@ -22,9 +22,6 @@
 
 using json = nlohmann::json;
 
-//std::string encodeToGlTF(const GeometryChunk& chunk);
-//std::string encodeToGltfWithTex(const GeometryChunk& chunk, const std::vector<std::string>& textureUrls);
-//void addImagesToGltf(json& gltf_json, const std::vector<std::string>& textureUrls);
 std::string encodeToGltf(
     const std::vector<dlovi::Matrix>& points,
     const std::list<dlovi::Matrix>& tris,
