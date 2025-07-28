@@ -2,7 +2,7 @@
 
 #pragma once
 #include <iostream>
-#include <external/zmq.hpp>
+#include <zmq.hpp>
 #include <ctime>
 bool notifyUpdate(int chunkId, const std::string& notifyAddress, const std::string& ownAddress);
 

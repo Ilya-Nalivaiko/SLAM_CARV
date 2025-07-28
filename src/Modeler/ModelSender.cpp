@@ -118,7 +118,6 @@ namespace ORB_SLAM2
         auto chunk = std::make_shared<GltfChunk>();
         chunk->gltf_json = std::move(gltf);
         chunk->textures = std::move(textureMap);
-        // currently does not have EXR textures, needed later TODO
 
         std::cout << "[SendModel_DEBUG] Texture map created" << std::endl;
 

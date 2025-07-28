@@ -1,8 +1,10 @@
 // Ilya Nalivaiko 2025
 
 #pragma once
+#define TINYEXR_IMPLEMENTATION
+#include <tinyexr.h>
 #include "ChunkCache.h"
-#include <external/httplib.h>
+#include <httplib.h>
 #include <thread>
 #include <opencv2/imgcodecs.hpp>
 #include <filesystem>

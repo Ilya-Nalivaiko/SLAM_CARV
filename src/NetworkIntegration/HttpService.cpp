@@ -37,26 +37,81 @@ HttpService::HttpService(int port, ChunkCache& cache) : port_(port), cache_(cach
         else if (ends_with(filename, ".jpg") || ends_with(filename, ".jpeg")) mime = "image/jpeg";
         else if (ends_with(filename, ".exr")) mime = "image/exr";
 
+        auto it = chunk->textures.find(filename);
+        if (it == chunk->textures.end()) {
+            res.status = 404;
+            res.set_content("Texture not found", "text/plain");
+            return;
+        }
+
+
+        //TODO. encoding it every serve may not be optimal, should do it before storing
+        // change gltfchunk implementation to have encoded pngs and exrs rather than cv mat
+
+        std::vector<uchar> encoded;
         if (ends_with(filename, ".exr")) {
-            auto exrIt = chunk->rawExrFiles.find(filename);
-            if (exrIt == chunk->rawExrFiles.end()) {
-                res.status = 404;
-                res.set_content("EXR file not found", "text/plain");
+            if (it->second.type() != CV_32FC1) {
+                res.status = 500;
+                res.set_content("Only single-channel float mats supported", "text/plain");
                 return;
             }
-            res.set_content(reinterpret_cast<const char*>(exrIt->second.data()), exrIt->second.size(), mime);
+
+            cv::Mat img = it->second; 
+            int width = img.cols;
+            int height = img.rows;
+
+            EXRHeader header;
+            InitEXRHeader(&header);
+
+            EXRImage image;
+            InitEXRImage(&image);
+
+            image.num_channels = 1;
+            float* images[1];
+            images[0] = (float*)img.data;
+            image.images = (unsigned char**)images;
+            image.width = width;
+            image.height = height;
+
+            const char* channel_names[] = { "Y" };
+            int pixel_types[] = { TINYEXR_PIXELTYPE_FLOAT };  // input type
+            int requested_types[] = { TINYEXR_PIXELTYPE_FLOAT }; // keep as float
+
+            header.num_channels = 1;
+            header.channels = (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo) * 1);
+            strcpy(header.channels[0].name, channel_names[0]);
+            header.pixel_types = pixel_types;
+            header.requested_pixel_types = requested_types;
+
+            unsigned char* out = nullptr;
+            const char* err = nullptr;
+
+            size_t out_size = SaveEXRImageToMemory(&image, &header, &out, &err);
+
+            if (out_size == 0) {
+                res.status = 500;
+                res.set_content(std::string("EXR encode failed: ") + (err ? err : "unknown"), "text/plain");
+                if (err) FreeEXRErrorMessage(err);
+                return;
+            }
+
+            // Serve response
+            std::string content(reinterpret_cast<char*>(out), out_size);
+            res.set_content(content.data(), content.size(), "image/exr");
+
+            // Cleanup
+            // TODO this is a memory leak but it (at least the first free()) crashes program
+            // free(out);
+            // FreeEXRHeader(&header);
+            // FreeEXRImage(&image);
+
+
         } else {
-            auto it = chunk->textures.find(filename);
-            if (it == chunk->textures.end()) {
-                res.status = 404;
-                res.set_content("Texture not found", "text/plain");
-                return;
-            }
-            std::vector<uchar> encoded;
             std::vector<int> params = {cv::IMWRITE_PNG_COMPRESSION, 3};
             cv::imencode(".png", it->second, encoded, params);
-            res.set_content(reinterpret_cast<const char*>(encoded.data()), encoded.size(), mime);
         }
+
+        res.set_content(reinterpret_cast<const char*>(encoded.data()), encoded.size(), mime);
     });
 }
 
