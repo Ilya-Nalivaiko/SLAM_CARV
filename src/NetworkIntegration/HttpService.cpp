@@ -36,6 +36,11 @@ HttpService::HttpService(int port, ChunkCache& cache) : port_(port), cache_(cach
         if (ends_with(filename, ".png")) mime = "image/png";
         else if (ends_with(filename, ".jpg") || ends_with(filename, ".jpeg")) mime = "image/jpeg";
         else if (ends_with(filename, ".exr")) mime = "image/exr";
+        else{
+            res.status = 404;
+            res.set_content("Unsupported texture format", "text/plain");
+            return;
+        }
 
         auto it = chunk->textures.find(filename);
         if (it == chunk->textures.end()) {
@@ -50,68 +55,110 @@ HttpService::HttpService(int port, ChunkCache& cache) : port_(port), cache_(cach
 
         std::vector<uchar> encoded;
         if (ends_with(filename, ".exr")) {
-            if (it->second.type() != CV_32FC1) {
+            std::cout << "Serving EXR matrix";
+
+            cv::Mat img = it->second;
+
+            if (!img.isContinuous()) {
+                img = img.clone(); // ensure continuous memory
+            }
+
+
+
+
+
+
+
+            
+            // TODO temp debug
+
+            std::ostringstream oss;
+            oss << std::hex << std::setfill('0');
+
+            const unsigned char* data = img.data;
+            size_t dataSize = img.total() * img.elemSize();
+
+            for (size_t i = 0; i < dataSize; i++) {
+                oss << std::setw(2) << static_cast<int>(data[i]);
+                if ((i + 1) % img.elemSize() == 0) oss << " "; // space between elements
+            }
+
+            // for some reason this doesnt work
+            std::cout << "== [HTTP Server] == cv::Mat image contains hex: " << oss.str();
+
+            // this does give stuff
+            // res.set_content(oss.str(), "text/plain");
+            // return;
+
+
+
+
+
+
+
+            if (img.type() != CV_32FC1) {
                 res.status = 500;
-                res.set_content("Only single-channel float mats supported", "text/plain");
+                res.set_content("Matrix must be CV_32FC1 (single channel float)", "text/plain");
                 return;
             }
 
-            cv::Mat img = it->second; 
             int width = img.cols;
             int height = img.rows;
 
-            EXRHeader header;
-            InitEXRHeader(&header);
+            EXRImage exr_image;
+            InitEXRImage(&exr_image);
 
-            EXRImage image;
-            InitEXRImage(&image);
+            EXRHeader exr_header;
+            InitEXRHeader(&exr_header);
 
-            image.num_channels = 1;
-            float* images[1];
-            images[0] = (float*)img.data;
-            image.images = (unsigned char**)images;
-            image.width = width;
-            image.height = height;
+            exr_image.num_channels = 1;
+            exr_image.width = width;
+            exr_image.height = height;
 
-            const char* channel_names[] = { "Y" };
-            int pixel_types[] = { TINYEXR_PIXELTYPE_FLOAT };  // input type
-            int requested_types[] = { TINYEXR_PIXELTYPE_FLOAT }; // keep as float
+            // TinyEXR expects array of channel pointers
+            float* img_data = (float*)img.data;
+            float* channels[1] = { img_data };
+            exr_image.images = reinterpret_cast<unsigned char**>(channels);
 
-            header.num_channels = 1;
-            header.channels = (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo) * 1);
-            strcpy(header.channels[0].name, channel_names[0]);
-            header.pixel_types = pixel_types;
-            header.requested_pixel_types = requested_types;
+            // Set up channel info
+            exr_header.num_channels = 1;
+            exr_header.channels = (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo));
+            strcpy(exr_header.channels[0].name, "Y");  // Gray channel name
 
+            int pixel_type[1] = { TINYEXR_PIXELTYPE_FLOAT };
+            int requested_type[1] = { TINYEXR_PIXELTYPE_FLOAT };
+            exr_header.pixel_types = pixel_type;
+            exr_header.requested_pixel_types = requested_type;
+
+            // Encode to memory
             unsigned char* out = nullptr;
             const char* err = nullptr;
+            size_t out_size = SaveEXRImageToMemory(&exr_image, &exr_header, &out, &err);
 
-            size_t out_size = SaveEXRImageToMemory(&image, &header, &out, &err);
-
-            if (out_size == 0) {
+            if (out_size == 0 || !out) {
+                std::string errmsg = "[EXR ERROR] ";
+                if (err) { errmsg += err; FreeEXRErrorMessage(err); }
                 res.status = 500;
-                res.set_content(std::string("EXR encode failed: ") + (err ? err : "unknown"), "text/plain");
-                if (err) FreeEXRErrorMessage(err);
+                res.set_content(errmsg, "text/plain");
                 return;
             }
 
-            // Serve response
+            // Send as HTTP response
             std::string content(reinterpret_cast<char*>(out), out_size);
             res.set_content(content.data(), content.size(), "image/exr");
 
             // Cleanup
-            // TODO this is a memory leak but it (at least the first free()) crashes program
-            // free(out);
-            // FreeEXRHeader(&header);
-            // FreeEXRImage(&image);
-
+            free(out);
+            free(exr_header.channels);
 
         } else {
+            std::cout << "Serving PNG texture";
             std::vector<int> params = {cv::IMWRITE_PNG_COMPRESSION, 3};
             cv::imencode(".png", it->second, encoded, params);
         }
 
         res.set_content(reinterpret_cast<const char*>(encoded.data()), encoded.size(), mime);
+        return;
     });
 }
 
