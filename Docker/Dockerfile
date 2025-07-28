@@ -332,11 +332,11 @@ RUN cd /root/orbslam3/SLAM_CARV && \
 	rm -rf build && \
     chmod +x build.sh && \
     ./build.sh && \
-    chmod +x /root/orbslam3/SLAM_CARV/run133.sh /root/orbslam3/SLAM_CARV/run75.sh
+    chmod +x /root/orbslam3/SLAM_CARV/133run.sh /root/orbslam3/SLAM_CARV/75run.sh
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
-RUN chmod +x /root/orbslam3/SLAM_CARV/camera/run.sh
+RUN chmod +x /root/orbslam3/SLAM_CARV/video.sh
 
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
