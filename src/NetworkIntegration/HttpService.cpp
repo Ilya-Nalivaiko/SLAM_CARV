@@ -55,56 +55,55 @@ HttpService::HttpService(int port, ChunkCache& cache) : port_(port), cache_(cach
 
         std::vector<uchar> encoded;
         if (ends_with(filename, ".exr")) {
-            std::cout << "Serving EXR matrix";
 
             cv::Mat img = it->second;
 
+            std::ostringstream dbg;
+            dbg << "== [HTTP Server Debug] ==\n";
+
+            // Ensure contiguous memory
             if (!img.isContinuous()) {
-                img = img.clone(); // ensure continuous memory
+                dbg << "Matrix not continuous, cloning...\n";
+                img = img.clone();
+            } else {
+                dbg << "Matrix is already continuous.\n";
             }
 
-
-
-
-
-
-
-            
-            // TODO temp debug
-
-            std::ostringstream oss;
-            oss << std::hex << std::setfill('0');
-
-            const unsigned char* data = img.data;
             size_t dataSize = img.total() * img.elemSize();
+            dbg << "Total data size (bytes): " << dataSize << "\n";
+            dbg << "Element size (bytes): " << img.elemSize() << "\n";
+            dbg << "Number of elements: " << img.total() << "\n";
 
-            for (size_t i = 0; i < dataSize; i++) {
-                oss << std::setw(2) << static_cast<int>(data[i]);
-                if ((i + 1) % img.elemSize() == 0) oss << " "; // space between elements
+            // Hex dump first few floats
+            dbg << "First 10 floats (hex + float):\n";
+            const float* fdata = reinterpret_cast<const float*>(img.data);
+            for (size_t i = 0; i < std::min<size_t>(10, img.total()); i++) {
+                const unsigned char* bytes = reinterpret_cast<const unsigned char*>(&fdata[i]);
+                dbg << "  [" << i << "] "
+                    << std::hex << std::setw(2) << std::setfill('0')
+                    << static_cast<int>(bytes[0]) << " "
+                    << static_cast<int>(bytes[1]) << " "
+                    << static_cast<int>(bytes[2]) << " "
+                    << static_cast<int>(bytes[3]) << std::dec
+                    << "  -> float=" << fdata[i] << "\n";
             }
 
-            // for some reason this doesnt work
-            std::cout << "== [HTTP Server] == cv::Mat image contains hex: " << oss.str();
-
-            // this does give stuff
-            // res.set_content(oss.str(), "text/plain");
-            // return;
-
-
-
-
-
-
-
+            // Check type
             if (img.type() != CV_32FC1) {
+                dbg << "Matrix type is NOT CV_32FC1. Got type=" << img.type() << "\n";
                 res.status = 500;
-                res.set_content("Matrix must be CV_32FC1 (single channel float)", "text/plain");
+                res.set_content(dbg.str(), "text/plain");
                 return;
+            } else {
+                dbg << "Matrix type confirmed CV_32FC1.\n";
             }
 
+            // Dimensions
             int width = img.cols;
             int height = img.rows;
+            dbg << "Matrix dimensions: " << width << " x " << height << "\n";
 
+            // TinyEXR setup
             EXRImage exr_image;
             InitEXRImage(&exr_image);
 
@@ -115,50 +114,67 @@ HttpService::HttpService(int port, ChunkCache& cache) : port_(port), cache_(cach
             exr_image.width = width;
             exr_image.height = height;
 
-            // TinyEXR expects array of channel pointers
-            float* img_data = (float*)img.data;
+            float* img_data = reinterpret_cast<float*>(img.data);
             float* channels[1] = { img_data };
             exr_image.images = reinterpret_cast<unsigned char**>(channels);
 
-            // Set up channel info
+            dbg << "Assigned channel pointer: " << static_cast<void*>(channels[0]) << "\n";
+            dbg << "First float value in channel: " << img_data[0] << "\n";
+
+            // Channel info
             exr_header.num_channels = 1;
             exr_header.channels = (EXRChannelInfo*)malloc(sizeof(EXRChannelInfo));
-            strcpy(exr_header.channels[0].name, "Y");  // Gray channel name
+            strcpy(exr_header.channels[0].name, "Y");
+
+            dbg << "Channel name set to 'Y'\n";
 
             int pixel_type[1] = { TINYEXR_PIXELTYPE_FLOAT };
             int requested_type[1] = { TINYEXR_PIXELTYPE_FLOAT };
             exr_header.pixel_types = pixel_type;
             exr_header.requested_pixel_types = requested_type;
 
-            // Encode to memory
+            dbg << "Pixel types assigned: FLOAT\n";
+
+            // Encode
             unsigned char* out = nullptr;
             const char* err = nullptr;
             size_t out_size = SaveEXRImageToMemory(&exr_image, &exr_header, &out, &err);
 
+            dbg << "SaveEXRImageToMemory returned size: " << out_size << "\n";
+            dbg << "Output pointer: " << static_cast<void*>(out) << "\n";
+
+            if (err) {
+                dbg << "TinyEXR reported error: " << err << "\n";
+                FreeEXRErrorMessage(err);
+            }
+
             if (out_size == 0 || !out) {
-                std::string errmsg = "[EXR ERROR] ";
-                if (err) { errmsg += err; FreeEXRErrorMessage(err); }
+                dbg << "Encoding failed, no output buffer.\n";
                 res.status = 500;
-                res.set_content(errmsg, "text/plain");
+                res.set_content(dbg.str(), "text/plain");
+                free(exr_header.channels);
                 return;
             }
 
-            // Send as HTTP response
+            // Copy to string for serving
             std::string content(reinterpret_cast<char*>(out), out_size);
-            res.set_content(content.data(), content.size(), "image/exr");
+            dbg << "Copied " << content.size() << " bytes into response string.\n";
+
+            //res.set_content(dbg.str(), "text/plain");
+            res.set_content(reinterpret_cast<const char*>(out), out_size, "image/exr");
 
             // Cleanup
             free(out);
             free(exr_header.channels);
+            return;
 
         } else {
             std::cout << "Serving PNG texture";
             std::vector<int> params = {cv::IMWRITE_PNG_COMPRESSION, 3};
             cv::imencode(".png", it->second, encoded, params);
+            res.set_content(reinterpret_cast<const char*>(encoded.data()), encoded.size(), mime);
+            return;
         }
-
-        res.set_content(reinterpret_cast<const char*>(encoded.data()), encoded.size(), mime);
-        return;
     });
 }
 
