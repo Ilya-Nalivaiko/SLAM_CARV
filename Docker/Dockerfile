@@ -332,7 +332,7 @@ RUN cd /root/orbslam3/SLAM_CARV && \
 	rm -rf build && \
     chmod +x build.sh && \
     ./build.sh && \
-    chmod +x /root/orbslam3/SLAM_CARV/133run.sh /root/orbslam3/SLAM_CARV/75run.sh
+    chmod +x /root/orbslam3/SLAM_CARV/run.sh
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
