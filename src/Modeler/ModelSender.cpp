@@ -22,12 +22,13 @@ namespace ORB_SLAM2
 
         // ===== get images and points from model ===== 
 
-        int numKFs = 10;
+        //safe to ask for more keyframes than there are in the queue. the harder control is mnMaxTextureQueueSize in Modeler.cc
+        int numKFs = 50;
         std::vector<std::pair<cv::Mat, ORB_SLAM2::TextureFrame>> imAndTexFrame = mpModeler->GetTextures(numKFs);
 
         if (imAndTexFrame.size() < numKFs) {
-            std::cerr << "[SendModel] Not enough keyframes for texture retrieval." << std::endl;
-            return;
+            std::cerr << "[SendModel] (Warning) Retrieved " << std::to_string(imAndTexFrame.size()) << " keyframes, less than " << std::to_string(numKFs) << " maximum." << std::endl;
+            //return;
         }
 
         UpdateModel();
