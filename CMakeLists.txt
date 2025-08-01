@@ -42,6 +42,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/NetworkIntegration
+    ${PROJECT_SOURCE_DIR}/include/NetworkIntegration/external
     ${EIGEN3_INCLUDE_DIR}
     ${Pangolin_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
@@ -64,6 +65,7 @@ add_library(NetworkIntegrationLib SHARED
     src/NetworkIntegration/Encoder.cpp
     src/NetworkIntegration/HttpService.cpp
     src/NetworkIntegration/Notifier.cpp
+    src/NetworkIntegration/external/miniz.c
 )
 
 SET_target_properties(NetworkIntegrationLib PROPERTIES

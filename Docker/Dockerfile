@@ -336,7 +336,7 @@ RUN cd /root/orbslam3/SLAM_CARV && \
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
-RUN chmod +x /root/orbslam3/SLAM_CARV/camera/run.sh
+RUN chmod +x /root/orbslam3/SLAM_CARV/video.sh
 
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
@@ -345,10 +345,11 @@ RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Exam
     && source /opt/ros/kinetic/setup.bash \
     && source /root/.bashrc \
     && export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
-    && cd ~/orbslam3 \
-    && cd SLAM_CARV \
+    && cd ~/orbslam3/SLAM_CARV \
     && chmod +x build_ros.sh \
-    && ./build_ros.sh
+    && ./build_ros.sh \
+	&& cd camera \
+	&& catkin_make
 
 
 SHELL ["/bin/sh", "-c"]
@@ -356,8 +357,8 @@ SHELL ["/bin/sh", "-c"]
 # change default location to orbslamcarv
 RUN echo "cd /root/orbslam3/SLAM_CARV" >> /root/.bashrc
 
+# build camera
 
-RUN echo "TESTING2"
 # ############################################################################################
 # ############################################################################################
 # ############################################################################################
@@ -366,7 +367,6 @@ RUN echo "TESTING2"
 # The following part is adapted partially from : https://github.com/jupemara/x11vnc-docker
 # -----------------------------------------------------------------------------------------
 # ============================================================================================
-RUN echo "TESTING2"
 EXPOSE 5900
 ENV \
   DEBIAN_FRONTEND="nonintractive" \

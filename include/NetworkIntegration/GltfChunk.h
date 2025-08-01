@@ -7,6 +7,5 @@
 
 struct GltfChunk {
     std::string gltf_json;
-    std::unordered_map<std::string, cv::Mat> textures; // for PNG/JPG
-    std::unordered_map<std::string, std::vector<uint8_t>> rawExrFiles; // for EXR raw bytes
+    std::unordered_map<std::string, cv::Mat> textures;
 };
