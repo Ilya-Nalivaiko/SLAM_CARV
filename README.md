@@ -13,6 +13,8 @@ FLIR camera setup with ros and linux
 5. See the upstream repo's changelog for more differences from the original SLAM CARV engine
 
 # Steps to run
+
+## The Docker container
 1. This code runs in a Docker container. Other than having the Docker engine installed and downloading this repository, there are no required dependencies
  ```
  $ ./docker_build.sh
@@ -26,22 +28,36 @@ $ ./run.sh
 ```
 localhost:5900
 ```
-4. right click anywhere, and open a shell. you will need 3 of these
+4. right click anywhere, and open a shell. You will need several of these
 ```
 Application >> Shells >> Bash
 ```
-5. First, we need the camera feed. To use a phone through Droidcam (TODO edit IP assignment), run the below commands in **two separate** windows
+
+## Camera Inpus
+This code supports multiple camera inputs. Choose one of the below that suits you best
+
+1. To use a traditional USB camera (such as a webcam), (TODO)
+
+2. To use a phone through Droidcam, change the IP in video.sh, then run the below commands in **two separate** shells
 ```
 $ roscore
 $ ./video.sh
 ```
-6. In the 3rd window, run carv CARV
+
+## Running CARV
+1. In a new bash shell, run CARV
 ```
 $ ./run.sh
 ```
-7. ORB-SLAM2 will load the vocabulary dictionary for DBoW and then you should see that the SLAM window and SLAM image feed is working.
-8. You will notice on the camera feed green tracking dots appearing. I recommend holding the camera steady watching a detailed surface, such as a keyboard, to have something to latch on to, then **slowly** looking around
-9. To export the model over the network, (TODO update this) press SEND_MODEL and use the Unity viewer (TODO add it to the repo?)
+2. ORB-SLAM2 will load the vocabulary dictionary for DBoW and then you should see that the SLAM window and SLAM image feed is working.
+3. You will notice on the camera feed green tracking dots appearing. I recommend holding the camera steady watching a detailed surface, such as a keyboard, to have something to latch on to, then **slowly** looking around
+
+## Remotely viewing the model
+To export the model over the network,
+
+(TODO update this)
+
+1. press SEND_MODEL and use the Unity viewer (TODO add it to the repo?)
 
 
 
