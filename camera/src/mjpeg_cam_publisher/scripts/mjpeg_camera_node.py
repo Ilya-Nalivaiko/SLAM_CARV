@@ -2,25 +2,22 @@
 # -*- coding: utf-8 -*-
 import rospy
 import cv2
-import numpy as np
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-
-#MJPEG_URL = "http://192.168.1.110:4747/video"  # Replace with your phone's IP
 
 def main():
     rospy.init_node("mjpeg_camera_node")
     pub = rospy.Publisher("/camera/image_raw", Image, queue_size=1)
     bridge = CvBridge()
 
-    for poss in [72, 109, 110]: # possibilities
-        cap = cv2.VideoCapture("http://192.168.1.{0}:4747/video".format(poss))
-        if not cap.isOpened():
-            continue
-        else:
-            break
+    # Get the IP parameter, default fallback if not set
+    ip_addr = rospy.get_param("~ip", "192.168.1.72")
+    url = "http://{0}:4747/video".format(ip_addr)
+    rospy.loginfo("Connecting to MJPEG stream at {0}".format(url))
+
+    cap = cv2.VideoCapture(url)
     if not cap.isOpened():
-        rospy.logerr("Failed to open MJPEG stream")
+        rospy.logerr("Failed to open MJPEG stream at {0}".format(url))
         return
 
     rate = rospy.Rate(30)
