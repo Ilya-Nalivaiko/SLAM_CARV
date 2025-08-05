@@ -36,12 +36,18 @@ Application >> Shells >> Bash
 ## Camera Inpus
 This code supports multiple camera inputs. Choose one of the below that suits you best
 
-1. To use a traditional USB camera (such as a webcam), (TODO)
-
-2. To use a phone through Droidcam, change the IP in video.sh, then run the below commands in **two separate** shells
+1. To use a traditional USB camera (such as a webcam), run
 ```
-$ roscore
-$ ./video.sh
+$ ./usb_video.sh
+```
+It is assumed your desired camera is /dev/video0 on the host. If not, you need to change the run command bindings
+
+2. To use a phone through Droidcam, change the IP in droidcam_video.sh, then run the below commands in **two separate** shells
+```
+# (TODO is this actually nessesary?)
+$ roscore 
+
+$ ./droidcam_video.sh
 ```
 
 ## Running CARV

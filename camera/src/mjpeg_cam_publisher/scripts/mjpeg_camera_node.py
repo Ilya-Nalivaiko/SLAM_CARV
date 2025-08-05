@@ -13,7 +13,7 @@ def main():
     # Get the IP parameter, default fallback if not set
     ip_addr = rospy.get_param("~ip", "192.168.1.72")
     url = "http://{0}:4747/video".format(ip_addr)
-    rospy.loginfo("Connecting to MJPEG stream at {0}".format(url))
+    rospy.loginfo("Connecting to MJPEG stream at {0}".format(url)) # need to use .format because this runs on python 3.5 (before f strings)
 
     cap = cv2.VideoCapture(url)
     if not cap.isOpened():
