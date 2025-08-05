@@ -16,11 +16,11 @@ FLIR camera setup with ros and linux
 
 ## The Docker container
 1. This code runs in a Docker container. Other than having the Docker engine installed and downloading this repository, there are no required dependencies
- ```
+ ```sh
  $ ./docker_build.sh
  ```
 2. Now you should be able to run the docker image with VNC capabilities. Ensure the parameters in run.sh are correct: (TODO explain args)
-```
+```sh
 $ cd Docker
 $ ./run.sh
 ```
@@ -37,13 +37,13 @@ Application >> Shells >> Bash
 This code supports multiple camera inputs. Choose one of the below that suits you best
 
 1. To use a traditional USB camera (such as a webcam), run
-```
+```sh
 $ ./usb_video.sh
 ```
 It is assumed your desired camera is /dev/video0 on the host. If not, you need to change the run command bindings
 
 2. To use a phone through Droidcam, change the IP in droidcam_video.sh, then run the below commands in **two separate** shells
-```
+```sh
 # (TODO is this actually nessesary?)
 $ roscore 
 
@@ -52,7 +52,9 @@ $ ./droidcam_video.sh
 
 ## Running CARV
 1. In a new bash shell, run CARV
-```
+```sh
+# (if in the wrong directory)
+$ cd ~/orbslam3/SLAM_CARV
 $ ./run.sh
 ```
 2. ORB-SLAM2 will load the vocabulary dictionary for DBoW and then you should see that the SLAM window and SLAM image feed is working.
