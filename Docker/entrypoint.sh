@@ -1,7 +1,15 @@
-#! /bin/sh
+#!/bin/bash
+set -e
 
-Xvfb :99 -ac -listen tcp -screen 0 1920x1080x24 &
-sleep 3
-/usr/bin/fluxbox -display :99 -screen 0 &
-sleep 3
-x11vnc -display :99.0 -forever -passwd ${X11VNC_PASSWORD:-password}
+# Create VNC password
+mkdir -p ~/.vnc
+echo "${X11VNC_PASSWORD}" | /opt/TurboVNC/bin/vncpasswd -f > ~/.vnc/passwd
+chmod 600 ~/.vnc/passwd
+
+# Start TurboVNC server with fluxbox as WM
+/opt/TurboVNC/bin/vncserver :1 -geometry 1920x1080 -depth 24 -wm fluxbox
+
+echo "[INFO] TurboVNC started on :1"
+
+# Keep container alive
+tail -f /dev/null
