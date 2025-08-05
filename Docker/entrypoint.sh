@@ -7,7 +7,7 @@ echo "${X11VNC_PASSWORD}" | /opt/TurboVNC/bin/vncpasswd -f > ~/.vnc/passwd
 chmod 600 ~/.vnc/passwd
 
 # Start TurboVNC server with fluxbox as WM
-/opt/TurboVNC/bin/vncserver :1 -geometry 1920x1080 -depth 24 -wm fluxbox
+/opt/TurboVNC/bin/vncserver :1 -geometry 1920x1080 -depth 16 -wm fluxbox
 
 echo "[INFO] TurboVNC started on :1"
 

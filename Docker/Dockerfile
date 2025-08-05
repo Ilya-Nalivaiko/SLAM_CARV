@@ -335,7 +335,7 @@ RUN cd /root/orbslam3/SLAM_CARV && \
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
-RUN chmod +x /root/orbslam3/SLAM_CARV/video.sh
+RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh
 
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
