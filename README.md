@@ -24,7 +24,7 @@ FLIR camera setup with ros and linux
 $ cd Docker
 $ ./run.sh
 ```
-3. In any VNC viewer, connect to the URL below. The password is "password"
+3. In any VNC viewer, connect to the URL below. The password is `password`
 ```
 localhost:5900
 ```
@@ -32,6 +32,7 @@ localhost:5900
 ```
 Application >> Shells >> Bash
 ```
+5. The default working directory is `~/orbslam3/SLAM_CARV`. This is where the below commands should be executed in, unless otherwise stated
 
 ## Camera Inpus
 This code supports multiple camera inputs. Choose one of the below that suits you best
@@ -40,25 +41,21 @@ This code supports multiple camera inputs. Choose one of the below that suits yo
 ```sh
 $ ./usb_video.sh
 ```
-It is assumed your desired camera is /dev/video0 on the host. If not, you need to change the run command bindings
+It is assumed your desired camera is `/dev/video0` on the host. If not, you need to change the run command bindings. Note this is difficult to get working on WSL, a native Linux host is recommended.
 
-2. To use a phone through Droidcam, change the IP in droidcam_video.sh, then run the below commands in **two separate** shells
+2. To use an MJPEG stream, such as a phone through Droidcam, change the IP in droidcam_video.sh, then run
 ```sh
-# (TODO is this actually nessesary?)
-$ roscore 
-
 $ ./droidcam_video.sh
 ```
 
 ## Running CARV
-1. In a new bash shell, run CARV
+1. Edit `run.sh` last argument to `usb_cam/image_raw` if you used a USB camera, or `camera/image_raw` for MJPEG.
+2. In a **new** bash shell (the one running your camera feed must stay alive), run it
 ```sh
-# (if in the wrong directory)
-$ cd ~/orbslam3/SLAM_CARV
 $ ./run.sh
 ```
-2. ORB-SLAM2 will load the vocabulary dictionary for DBoW and then you should see that the SLAM window and SLAM image feed is working.
-3. You will notice on the camera feed green tracking dots appearing. I recommend holding the camera steady watching a detailed surface, such as a keyboard, to have something to latch on to, then **slowly** looking around
+3. ORB-SLAM2 will load the vocabulary dictionary for DBoW and then you should see that the SLAM window and SLAM image feed is working.
+4. You will notice on the camera feed green tracking dots appearing. I recommend holding the camera steady watching a detailed surface, such as a keyboard, to have something to latch on to, then **slowly** looking around
 
 ## Remotely viewing the model
 To export the model over the network,
