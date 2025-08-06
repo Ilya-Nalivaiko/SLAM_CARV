@@ -73,15 +73,4 @@ To export the model over the network,
 
 # Setting up the workspace
 
-TODO update all of this for the new dependencies?
-
-
-1. Install ros melodic (Tutorial [Here](https://wiki.ros.org/melodic/Installation/Ubuntu]) )
-2. Install ORB-SLAM2 dependencies
-3. Install CGAL ``` sudo apt-get install libcgal-dev ```
-4. Edit from original repo [Here](https://github.com/atlas-jj/ORB-SLAM-free-space-carving/tree/master)
-   - Move the code to work with c++14 in order to avoid the error of not having proper access to ```std::decay_t```
-5. change permission for build file of ORB-SLAM2 ```chmod +x ./build.sh```
-6. build ORB-SLAM2 ```./build.sh```
-7. change permission for build file of ROS modules ```chmod +x ./build_ros.sh```
-8. build ros modules ```./build_ros.sh```
+TODO update all of this for devcontainer once it works
