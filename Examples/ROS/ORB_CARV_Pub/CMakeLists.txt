@@ -26,8 +26,8 @@ message(STATUS "Forcing compilation with C++17 standard.")
 # ===========================
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../../../cmake_modules)
 
-find_package(OpenCV 3.4 REQUIRED)
-find_package(Eigen3 3.1.0 REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(Pangolin REQUIRED)
 
 # CGAL
@@ -56,6 +56,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/../../../include/NetworkIntegration
   ${PROJECT_SOURCE_DIR}/../../../include/NetworkIntegration/external        # <---- Added for httplib.h
   ${Pangolin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 # ===========================
@@ -69,8 +70,6 @@ set(LIBS
   ${PROJECT_SOURCE_DIR}/../../../Thirdparty/g2o/lib/libg2o.so
   ${PROJECT_SOURCE_DIR}/../../../lib/libORB_SLAM2_Pub.so
   ${PROJECT_SOURCE_DIR}/../../../lib/libNetworkIntegrationLib.so
-  /usr/local/lib/libopencv_core.so.3.4
-  /usr/local/lib/libopencv_imgproc.so.3.4
   -lboost_system
   lapack
   blas
