@@ -65,9 +65,9 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "Mono");
     ros::start();
 
-    if(argc != 7)
+    if(argc != 8)
     {
-        cerr << endl << "Usage: rosrun ORB_CARV_Pub Mono path_to_vocabulary path_to_settings own_ip http_port unity_ip unity_zmq_port" << endl;
+        cerr << endl << "Usage: rosrun ORB_CARV_Pub Mono path_to_vocabulary path_to_settings own_ip http_port unity_ip unity_zmq_port image_topic" << endl;
         ros::shutdown();
         return 1;
     }
@@ -76,6 +76,7 @@ int main(int argc, char **argv)
     int httpPort = std::stoi(argv[4]);
     std::string unityIp = argv[5];
     int zmqPort = std::stoi(argv[6]);
+    std::string imageTopic = argv[7];
 
     std::string ownAddress = ownIp + ":" + std::to_string(httpPort);
     std::string unityAddress = unityIp + ":" + std::to_string(zmqPort);
@@ -93,7 +94,7 @@ int main(int argc, char **argv)
     ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage, &igb);
+    ros::Subscriber sub = nodeHandler.subscribe(imageTopic, 1, &ImageGrabber::GrabImage, &igb);
 
     pubTask = nodeHandler.advertise<std_msgs::String>("/chris/twc", 1);
     pubCARVScripts = nodeHandler.advertise<std_msgs::String>("/carv/script", 1);

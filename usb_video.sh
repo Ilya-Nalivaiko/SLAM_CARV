@@ -1,1 +1,1 @@
-$ roslaunch usb_cam usb_cam-test.launch
+roslaunch usb_cam usb_cam-test.launch
