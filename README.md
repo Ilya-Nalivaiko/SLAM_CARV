@@ -28,6 +28,8 @@ $ ./run.sh
 ```
 localhost:5900
 ```
+Note that the Docker host uses X11. If you are connecing on a Wayland client, you may experience visual glitches on some VNC viewers (one that seems to avoid issues is Remmina, so try using that if you experience issues)
+
 4. right click anywhere, and open a shell. You will need several of these
 ```
 Application >> Shells >> Bash
