@@ -1,0 +1,26 @@
+{
+  "name": "ORB-SLAM2 Dev",
+  "build": {
+    "dockerfile": "../Docker/Dockerfile",
+    "context": "..",
+    "target": "base"
+  },
+  "remoteUser": "root",
+
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind"
+  ],
+  "workspaceFolder": "/workspace",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+      },
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+      ]
+    }
+  }
+}

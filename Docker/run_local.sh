@@ -1,3 +1,15 @@
 #!/bin/bash
 
-docker run -d -p 5900:5900 -p 8080:8080 --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --privileged --device=/dev/video0:/dev/video0 --env QT_X11_NO_MITSHM=1 -it islamaali/slam_carv-docker:v1.0
+docker run -d\
+  -p 5901:5901 \
+  -p 8080:8080 \
+  --tmpfs /tmp:rw,size=100m \
+  --tmpfs /root/.vnc \
+  --rm\
+  --privileged \
+  -e DISPLAY=:1 \
+  -e QT_X11_NO_MITSHM=1 \
+  --security-opt seccomp=unconfined \
+  --security-opt apparmor=unconfined \
+  --device=/dev/video0:/dev/video0 \
+  islamaali/slam_carv-docker:v1.0 bash

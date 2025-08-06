@@ -1,7 +1,7 @@
-FROM ubuntu:16.04
-MAINTAINER Islam A. Ali <islam.a.mustafa@gmail.com>
-
-
+# -----------------------------------
+# Base image: dependencies only
+# -----------------------------------
+FROM ubuntu:16.04 AS base
 
 # ------------------------------------------------------------------------------------------
 # Definitions
@@ -220,77 +220,7 @@ RUN apt-get update && \
 
 # ------------------------------------------------------------------------------------------
 
-
-
-
-
-
-
-
-	
-
-
-
-
-
-# # ========== BEGIN TROUBLESHOOTING BLOCK ==========
-
-# RUN echo "[DEBUG] ==== System environment ====" && \
-#     env && \
-#     echo "[DEBUG] ==== gcc version ====" && \
-#     gcc --version && \
-#     echo "[DEBUG] ==== g++ version ====" && \
-#     g++ --version && \
-#     echo "[DEBUG] ==== c++ version ====" && \
-#     c++ --version && \
-#     echo "[DEBUG] ==== which gcc / g++ / c++ ====" && \
-#     which gcc && which g++ && which c++ && \
-#     echo "[DEBUG] ==== update-alternatives status ====" && \
-#     update-alternatives --display gcc && \
-#     update-alternatives --display g++ && \
-#     echo "[DEBUG] ==== CMake version ====" && \
-#     cmake --version && \
-#     echo "[DEBUG] ==== Checking OpenCV installation files ====" && \
-#     find /usr/local/lib -name "libopencv_core.so*" && \
-#     find /usr/lib -name "libopencv_core.so*" && \
-#     echo "[DEBUG] ==== Checking OpenCV pkg-config ====" && \
-#     pkg-config --modversion opencv || echo "pkg-config opencv not found" && \
-#     pkg-config --modversion opencv4 || echo "pkg-config opencv4 not found" && \
-#     echo "[DEBUG] ==== Checking OpenCV compilation test ====" && \
-#     echo '#include <opencv2/core.hpp>\n#include <iostream>\nint main(){std::cout<<CV_VERSION<<std::endl;return 0;}' > test_opencv.cpp && \
-#     g++ -std=c++17 test_opencv.cpp -o test_opencv `pkg-config --cflags --libs opencv4` || g++ -std=c++17 test_opencv.cpp -o test_opencv `pkg-config --cflags --libs opencv` || echo "Failed to compile OpenCV test" && \
-#     ./test_opencv || echo "OpenCV runtime test failed" && \
-#     echo "[DEBUG] ==== Checking std::shared_mutex support ====" && \
-#     echo '#include <shared_mutex>\nint main(){std::shared_mutex m; return 0;}' > test_mutex.cpp && \
-#     g++ -std=c++17 test_mutex.cpp -o test_mutex && \
-#     ./test_mutex && \
-#     echo "[DEBUG] ==== Checking ldd on test_mutex ====" && \
-#     ldd ./test_mutex && \
-#     echo "[DEBUG] ==== Finished pre-build environment checks ===="
-
-# # ========== END TROUBLESHOOTING BLOCK ==========
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# [8] Install SLAM CARV
+# [8] Install SLAM CARV dependencies
 
 RUN apt-get update && apt-get install -y \
 	libpcap-dev \
@@ -305,6 +235,15 @@ RUN apt-get update && apt-get install -y \
 	libzmq3-dev
 
 
+# -----------------------------------
+# Runtime image: adds source & builds
+# -----------------------------------
+FROM base AS runtime
+
+WORKDIR /root/orbslam3/SLAM_CARV
+COPY . /root/orbslam3/SLAM_CARV
+
+# [9] Install and build SLAM CARV
 
 # RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from GitHub ......"
 # RUN mkdir -p ~/orbslam3 && \
@@ -336,7 +275,7 @@ RUN cd /root/orbslam3/SLAM_CARV && \
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
-RUN chmod +x /root/orbslam3/SLAM_CARV/video.sh
+RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh
 
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
@@ -357,21 +296,17 @@ SHELL ["/bin/sh", "-c"]
 # change default location to orbslamcarv
 RUN echo "cd /root/orbslam3/SLAM_CARV" >> /root/.bashrc
 
-# build camera
-
-# ############################################################################################
-# ############################################################################################
-# ############################################################################################
-# ============================================================================================
-# -----------------------------------------------------------------------------------------
-# The following part is adapted partially from : https://github.com/jupemara/x11vnc-docker
-# -----------------------------------------------------------------------------------------
-# ============================================================================================
+# set up VNC server
 EXPOSE 5900
 ENV \
   DEBIAN_FRONTEND="nonintractive" \
   X11VNC_PASSWORD="password"
 RUN apt-get update -y
-RUN apt-get install -y xvfb x11vnc fluxbox
+RUN apt-get install -y xvfb fluxbox wget gnupg && \
+    wget https://downloads.sourceforge.net/project/turbovnc/3.1/turbovnc_3.1_amd64.deb && \
+    apt-get install -y ./turbovnc_3.1_amd64.deb && \
+    rm turbovnc_3.1_amd64.deb
 ADD ./Docker/entrypoint.sh /opt/entrypoint.sh
+RUN chmod +x /opt/entrypoint.sh
+
 ENTRYPOINT /opt/entrypoint.sh
