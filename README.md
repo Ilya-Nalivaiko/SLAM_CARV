@@ -62,10 +62,12 @@ $ ./run.sh
 ## Remotely viewing the model
 To export the model over the network,
 
-(TODO update this)
-
-1. press SEND_MODEL and use the Unity viewer (TODO add it to the repo?)
-
+1. Ensure the correct port is bound in `./run.sh` for the HTTP server. The default is 8080, but if there is a conflict, you must adjust this
+2. Change the IP adresses in `./run.sh`.
+  a. The first IP address is the IP adress the Unity server can use to access the CARV HTTP server, and its port (see 1.)
+  b. The second IP address is of the Unity server and its ZMQ port, to send the update messages to
+3. Run the CARV model as above, and the Unity server.
+4. (TODO temp) press the send model button in CARV to send the model to the Unity server (or more specifically, tell the Unity server to fetch it)
 
 
 
