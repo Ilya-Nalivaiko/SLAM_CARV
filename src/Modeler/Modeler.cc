@@ -152,7 +152,7 @@ namespace ORB_SLAM2 {
         }
 
         if (imGray.channels() > 1) // this should be always true
-            cv::cvtColor(imGray,imGray,CV_RGB2GRAY);
+            cv::cvtColor(imGray,imGray,cv::COLOR_RGB2GRAY);
 
         std::vector<LineSegment> lines = DetectLineSegments(imGray);
 
@@ -486,7 +486,7 @@ namespace ORB_SLAM2 {
             }
 
             if (imGray.channels() > 1) // this should be always true
-                cv::cvtColor(imGray, imGray, CV_RGB2GRAY);
+                cv::cvtColor(imGray, imGray, cv::COLOR_RGB2GRAY);
 
             std::vector<LineSegment> lines = DetectLineSegments(imGray);
 
@@ -1501,7 +1501,7 @@ namespace ORB_SLAM2 {
         cv::Mat imc;
         im.copyTo(imc);
         if(imc.channels() < 3)
-            cvtColor(imc,imc,CV_GRAY2RGB);
+            cvtColor(imc,imc,cv::COLOR_GRAY2RGB);
 
         if (mmFrameQueue.size() >= mnMaxFrameQueueSize) {
             mmFrameQueue.erase(mmFrameQueue.begin());
@@ -1541,7 +1541,7 @@ namespace ORB_SLAM2 {
         }
 
         if(im.channels() < 3) // this should always be true
-            cvtColor(im,im,CV_GRAY2RGB);
+            cvtColor(im,im,cv::COLOR_GRAY2RGB);
 
         for(size_t i = 0; i < mvLines.size(); i++){
             LineSegment line = mvLines[i];

@@ -161,7 +161,7 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
         viewerAR.SetImagePose(imu,Tcw,state,vKeys,vMPs);
     else
     {
-        cv::cvtColor(imu,imu,CV_RGB2BGR);
+        cv::cvtColor(imu,imu,cv::COLOR_RGB2BGR);
         viewerAR.SetImagePose(imu,Tcw,state,vKeys,vMPs);
     }    
 }
