@@ -73,4 +73,28 @@ To export the model over the network,
 
 # Setting up the workspace
 
-TODO update all of this for devcontainer once it works
+## Dev Container
+This option is best for VS Code on Linux. This lets you work in the same base environment as the Docker container the code will run in, without affecting your local system.
+1. Install the Dev Containers extension (by Microsoft)
+2. Open the project folder normally
+3. Use `ctrl + shift + P` >> `Dev Containers: Reopen in Dev Container`
+4. The configuration is stored in `.devcontainer/devcontainer.json`, but should be auto-detected
+5. Once the container is built, you are working with the same dependencies as the Docker container
+6. You may wish to add the following to your VS Code settings (under "configurations")
+```json
+"includePath": [
+    "${workspaceFolder}/**",
+    "/usr/include/opencv4"
+],
+"compilerPath": "/usr/bin/gcc",
+"cStandard": "c17",
+"cppStandard": "c++17",
+"intelliSenseMode": "linux-gcc-x64"
+```
+
+## WSL
+Windows users may choose to instead configure their WSL environment to match that of the Docker container. You can use `Docker/Dockerfile` for reference as to what dependencies and system configurations are required.
+
+## Native
+Similar to WSL, some Linux users may choose to install required dependencies locally. This is generally **not recommended**, as it may cause unexpected issues and conflicts with other things installed on your system, and if your base distro differs from that of the container (currently Ubuntu 20.04), packages may not be availiable and you would have to build most things from source. You may consult `Docker/Dockerfile` if you wish, but proceed at your own risk.
+
