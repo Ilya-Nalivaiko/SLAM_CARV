@@ -1,3 +1,2 @@
-cd camera
-source devel/setup.bash
-rosrun mjpeg_cam_publisher mjpeg_camera_node.py _ip:=192.168.1.109
+source /root/orbslam3/SLAM_CARV/camera/devel/setup.bash
+roslaunch mjpeg_cam_publisher camera.launch

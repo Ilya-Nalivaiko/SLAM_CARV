@@ -65,8 +65,8 @@ RUN apt-get update && apt-get install -y \
         libtiff-dev \
         libopenexr-dev
 
-RUN mkdir -p ~/pangolin && \
-        cd ~/pangolin && \
+RUN mkdir -p /root/pangolin && \
+        cd /root/pangolin && \
         git clone --branch v0.6 https://github.com/stevenlovegrove/Pangolin.git && \
         cd Pangolin && \
         mkdir build && cd build && \
@@ -84,7 +84,7 @@ RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | apt
 RUN apt-get update && apt-get install -y ros-noetic-desktop-full
 
 # Setup ROS environment
-RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc
 ENV ROS_DISTRO=noetic
 
 # Initialize rosdep
@@ -130,11 +130,11 @@ RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droi
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
 
-RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
+RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:/root/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
     && source /opt/ros/noetic/setup.bash \
     && source /root/.bashrc \
-    && export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
-    && cd ~/orbslam3/SLAM_CARV \
+    && export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:/root/orbslam3/SLAM_CARV/Examples/ROS \
+    && cd /root/orbslam3/SLAM_CARV \
     && chmod +x build_ros.sh \
     && ./build_ros.sh \
 	&& cd camera \
