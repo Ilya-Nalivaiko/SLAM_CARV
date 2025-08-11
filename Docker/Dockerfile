@@ -137,9 +137,9 @@ RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:/root/orbslam3/SLAM_CARV/
     && cd /root/orbslam3/SLAM_CARV \
     && chmod +x build_ros.sh \
     && ./build_ros.sh \
-	&& cd camera \
-	&& catkin_make
 
+RUN chmod +x /root/orbslam3/SLAM_CARV/mjpeg_cam_publisher/scripts/mjpeg_camera_node.py \
+	&& echo "export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:/root/orbslam3/SLAM_CARV/mjpeg_cam_publisher" >> /root/.bashrc
 
 SHELL ["/bin/sh", "-c"]
 
