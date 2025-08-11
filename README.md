@@ -95,7 +95,8 @@ This option is best for VS Code on Linux, and should also work in WSL. This lets
 ```json
 "includePath": [
     "${workspaceFolder}/**",
-    "/usr/include/opencv4"
+    "/usr/include/opencv4",
+    "/usr/include/eigen3"
 ],
 "compilerPath": "/usr/bin/gcc",
 "cStandard": "c17",
