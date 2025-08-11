@@ -1,3 +1,1 @@
-cd camera
-source devel/setup.bash
-rosrun mjpeg_cam_publisher mjpeg_camera_node.py _ip:=192.168.1.109
+roslaunch mjpeg_cam_publisher camera.launch ip:=192.168.1.110

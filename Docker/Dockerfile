@@ -65,8 +65,8 @@ RUN apt-get update && apt-get install -y \
         libtiff-dev \
         libopenexr-dev
 
-RUN mkdir -p ~/pangolin && \
-        cd ~/pangolin && \
+RUN mkdir -p /root/pangolin && \
+        cd /root/pangolin && \
         git clone --branch v0.6 https://github.com/stevenlovegrove/Pangolin.git && \
         cd Pangolin && \
         mkdir build && cd build && \
@@ -84,7 +84,7 @@ RUN curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | apt
 RUN apt-get update && apt-get install -y ros-noetic-desktop-full
 
 # Setup ROS environment
-RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc
 ENV ROS_DISTRO=noetic
 
 # Initialize rosdep
@@ -115,6 +115,8 @@ FROM base AS runtime
 WORKDIR /root/orbslam3/SLAM_CARV
 COPY . /root/orbslam3/SLAM_CARV
 
+
+
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from local source ......"
 
 RUN cd /root/orbslam3/SLAM_CARV && \
@@ -127,19 +129,33 @@ ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
 RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh
 
+
+
+RUN echo "[Dockerfile Info] Setting up ROS packages ......"
+
 # Set the default shell to bash
 SHELL ["/bin/bash", "-c"]
 
-RUN echo "export ROS_PACKAGE_PATH=\${ROS_PACKAGE_PATH}:~/orbslam3/SLAM_CARV/Examples/ROS" >> /root/.bashrc \
-    && source /opt/ros/noetic/setup.bash \
-    && source /root/.bashrc \
-    && export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/orbslam3/SLAM_CARV/Examples/ROS \
-    && cd ~/orbslam3/SLAM_CARV \
-    && chmod +x build_ros.sh \
-    && ./build_ros.sh \
-	&& cd camera \
-	&& catkin_make
+    # set up ROS for runtime
+RUN printf 'source /opt/ros/noetic/setup.bash\n' >> /root/.bashrc && \
+    printf 'export ROS_PACKAGE_PATH=/root/orbslam3/SLAM_CARV/Examples/ROS:/root/orbslam3/SLAM_CARV/mjpeg_cam_publisher:$ROS_PACKAGE_PATH\n' >> /root/.bashrc && \
+    # Do it again for the build because sourcing .bashrc doesnt work for whatever reason
+    source /opt/ros/noetic/setup.bash && \
+    export ROS_PACKAGE_PATH=/root/orbslam3/SLAM_CARV/Examples/ROS:/root/orbslam3/SLAM_CARV/mjpeg_cam_publisher:$ROS_PACKAGE_PATH && \
+    # verify packages can be seen
+    rospack profile && \
+    rospack find ORB_CARV_Pub >/dev/null && \
+    rospack find mjpeg_cam_publisher >/dev/null && \
+    # build main package
+    cd /root/orbslam3/SLAM_CARV && \
+    chmod +x build_ros.sh && \
+    ./build_ros.sh && \
+    # Make Python work
+    chmod +x /root/orbslam3/SLAM_CARV/mjpeg_cam_publisher/scripts/mjpeg_camera_node.py
 
+
+
+RUN echo "[Dockerfile Info] Finishing up environment setup and VNC ......"
 
 SHELL ["/bin/sh", "-c"]
 

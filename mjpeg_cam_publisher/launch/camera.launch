@@ -1,0 +1,10 @@
+<launch>
+  <arg name="ip" default="192.168.1.109"/>
+
+  <node pkg="mjpeg_cam_publisher"
+        type="mjpeg_camera_node.py"
+        name="mjpeg_camera"
+        output="screen">
+    <param name="ip" value="$(arg ip)"/>
+  </node>
+</launch>
