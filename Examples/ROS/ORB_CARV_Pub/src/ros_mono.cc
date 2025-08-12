@@ -138,10 +138,10 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
       {
         cv::Mat TWC = pKF->GetPoseInverse();//return TWC
 
-        cout<<"key frame mnId: "<<pKF->mnId<<endl;//int--------------------------------------debug
+        //cout<<"key frame mnId: "<<pKF->mnId<<endl;//int--------------------------------------debug
         cout.precision(15);
-        cout<<"key frame timestamp"<<std::fixed<<pKF->mTimeStamp<<endl;//double--------------------------------------debug
-        cout<<"ros mono MyCurrent Key Frame. camera center: "<<endl<<pKF->GetCameraCenter()<<endl;//--------------------------------debug
+        //cout<<"key frame timestamp"<<std::fixed<<pKF->mTimeStamp<<endl;//double--------------------------------------debug
+        //cout<<"ros mono MyCurrent Key Frame. camera center: "<<endl<<pKF->GetCameraCenter()<<endl;//--------------------------------debug
 
         std_msgs::String msg;
         std::stringstream ss;
