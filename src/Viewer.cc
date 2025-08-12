@@ -89,6 +89,7 @@ namespace ORB_SLAM2
         pangolin::Var<bool> menuSaveCARV("menu.Save CARV",false,true);
         pangolin::Var<bool> menuReset("menu.Reset",false,false);
         pangolin::Var<bool> menuSendModel("menu.Send Model",false,false);
+        pangolin::Var<bool> menuAutoSend("menu.Auto Send",false,true);
         pangolin::Var<bool> menuLocalizationMode("menu.Localization Mode",false,true);
         // Define Camera Render Object (for view / scene browsing)
         pangolin::OpenGlRenderState s_map(
@@ -169,6 +170,9 @@ namespace ORB_SLAM2
                 bCameraView = false;
             }
 
+            bool updated = mpModelDrawer->UpdateModel();
+
+
             d_map.Activate(s_map);
             glClearColor(1.0f,1.0f,1.0f,1.0f);
             mpMapDrawer->DrawCurrentCamera(MapTwc);
@@ -192,6 +196,14 @@ namespace ORB_SLAM2
                 mpModelDrawer->DrawFrame(mbRGB);
             }
             
+            if (menuAutoSend && updated){
+                if (cachePtr) {
+                    mpModelDrawer->SendModel(true, *cachePtr, ownAddress, unityAddress);
+                } else {
+                    std::cerr << "[Viewer] cachePtr not set\n";
+                }
+            }
+
             if (menuSendModel)
             {
                 if (cachePtr) {
