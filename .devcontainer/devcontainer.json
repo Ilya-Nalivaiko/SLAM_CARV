@@ -15,7 +15,17 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+        "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+        "C_Cpp.default.includePath": [
+          "${workspaceFolder}/**",
+          "/usr/include/opencv4",
+          "/usr/include/eigen3"
+        ],
+        "C_Cpp.default.defines": [],
+        "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+        "C_Cpp.default.cStandard": "c17",
+        "C_Cpp.default.cppStandard": "c++17",
+        "C_Cpp.default.intelliSenseMode": "linux-gcc-x64"
       },
       "extensions": [
         "ms-vscode.cpptools",
