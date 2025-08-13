@@ -3,7 +3,7 @@ set -e
 
 # Create VNC password
 mkdir -p ~/.vnc
-echo "${X11VNC_PASSWORD}" | /opt/TurboVNC/bin/vncpasswd -f > ~/.vnc/passwd
+echo "${X11VNC_P}" | /opt/TurboVNC/bin/vncpasswd -f > ~/.vnc/passwd
 chmod 600 ~/.vnc/passwd
 
 # Start TurboVNC server with fluxbox as WM

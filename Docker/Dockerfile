@@ -164,7 +164,7 @@ RUN echo "cd /root/orbslam3/SLAM_CARV" >> /root/.bashrc
 
 # set up VNC server
 EXPOSE 5900
-ENV X11VNC_PASSWORD="password"
+ENV X11VNC_P="password"
 RUN apt-get update -y
 RUN apt-get install -y xvfb fluxbox wget gnupg && \
     wget https://downloads.sourceforge.net/project/turbovnc/3.1/turbovnc_3.1_amd64.deb && \
