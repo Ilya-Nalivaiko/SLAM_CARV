@@ -21,7 +21,7 @@ cd Thirdparty/DBoW2
 rm -rf build
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Debug
 make -j$(nproc)
 cd ../../../
 
@@ -42,7 +42,7 @@ cd Thirdparty/g2o
 rm -rf build
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Debug
 make -j$(nproc)
 cd ../../../
 
@@ -68,7 +68,7 @@ mkdir build
 cd build
 
 echo "[INFO] Running CMake configuration..."
-cmake .. -DCMAKE_BUILD_TYPE=Release | tee ../cmake_configure.log
+cmake .. -DCMAKE_BUILD_TYPE=Debug | tee ../cmake_configure.log
 CMAKE_EXIT_CODE=${PIPESTATUS[0]}
 if [ $CMAKE_EXIT_CODE -ne 0 ]; then
     echo "[ERROR] CMake configuration failed. Check cmake_configure.log."
