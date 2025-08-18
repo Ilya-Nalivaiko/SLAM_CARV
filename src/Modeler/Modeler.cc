@@ -1517,17 +1517,32 @@ namespace ORB_SLAM2 {
     // get last n keyframes for texturing
     std::vector<pair<cv::Mat,TextureFrame>> Modeler::GetTextures(int n)
     {
-        unique_lock<mutex> lock(mMutexTexture);
-        unique_lock<mutex> lock2(mMutexFrame);
-        int nLastKF = mdTextureQueue.size() - 1;
-        std::vector<pair<cv::Mat,TextureFrame>> imAndTexFrame;
-        // n most recent KFs
-        for (int i = 0; i < n && i <= nLastKF; i++){
-            TextureFrame texFrame = mdTextureQueue[std::max(0,nLastKF-i)];
-            imAndTexFrame.push_back(make_pair(mmFrameQueue[texFrame.mFrameID],texFrame));
-        }
+        // Lock both without deadlock
+        std::unique_lock<std::mutex> lockTex(mMutexTexture, std::defer_lock);
+        std::unique_lock<std::mutex> lockFrm(mMutexFrame,  std::defer_lock);
+        std::lock(lockTex, lockFrm);
 
-        return imAndTexFrame;
+        const std::size_t sz = mdTextureQueue.size();
+        if (sz == 0 || n <= 0) return {};
+
+        const std::size_t take = std::min<std::size_t>(n, sz);
+
+        std::vector<std::pair<cv::Mat, TextureFrame>> out;
+        out.reserve(take);
+
+        for (std::size_t i = 0; i < take; ++i) {
+            const std::size_t idx = (sz - 1) - i;              // sz>0 so no underflow
+            const TextureFrame& texFrame = mdTextureQueue[idx];
+
+            // Prefer at()/find() to avoid accidental insertion
+            auto it = mmFrameQueue.find(texFrame.mFrameID);
+            if (it == mmFrameQueue.end()) {
+                // decide: skip, throw, or log — here we skip missing frames
+                continue;
+            }
+            out.emplace_back(it->second, texFrame);            // cv::Mat copy is cheap (RC)
+        }
+        return out;
     }
 
     cv::Mat Modeler::GetImageWithLines()

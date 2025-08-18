@@ -46,8 +46,6 @@ namespace ORB_SLAM2
                 }
             }
 
-            UpdateModel();
-
             glEnable(GL_TEXTURE_2D);
 
             glBegin(GL_TRIANGLES);
@@ -119,8 +117,6 @@ namespace ORB_SLAM2
 
     void ModelDrawer::DrawModelPoints()
     {
-        UpdateModel();
-
         glPointSize(3);
         glBegin(GL_POINTS);
         glColor3f(0.5, 0.5, 0.5);
@@ -132,8 +128,6 @@ namespace ORB_SLAM2
 
     void ModelDrawer::DrawTriangles(pangolin::OpenGlMatrix &Twc)
     {
-        UpdateModel();
-
         glPushMatrix();
 
 #ifdef HAVE_GLES
@@ -220,19 +214,26 @@ namespace ORB_SLAM2
     }
 
 
-    void ModelDrawer::UpdateModel()
+    // returns true if model just got updated
+    bool ModelDrawer::UpdateModel()
     {
         if(mbModelUpdateRequested && ! mbModelUpdateDone)
-            return;
+            return false;
+            std::cout << "Model update IN PROGRESS\n";
 
         if(mbModelUpdateRequested && mbModelUpdateDone){
             mModel = mUpdatedModel;
             mbModelUpdateRequested = false;
-            return;
+
+            std::cout << "Model update COMPLETED\n";
+            return true;
         }
+
+        std::cout << "Model update REQUESTED\n";
 
         mbModelUpdateDone = false;
         mbModelUpdateRequested = true; // implicitly signals SurfaceInferer thread which is polling
+        return false;
     }
 
     void ModelDrawer::SetUpdatedModel(const vector<dlovi::Matrix> & modelPoints, const list<dlovi::Matrix> & modelTris)

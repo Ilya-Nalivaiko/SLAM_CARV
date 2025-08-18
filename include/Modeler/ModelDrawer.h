@@ -36,7 +36,7 @@ namespace ORB_SLAM2
         void DrawFrame(bool bRGB);
         cv::Mat DrawLines();
 
-        void UpdateModel();
+        bool UpdateModel();
         void SetUpdatedModel(const vector<dlovi::Matrix> & modelPoints, const list<dlovi::Matrix> & modelTris);
 
         void MarkUpdateDone();

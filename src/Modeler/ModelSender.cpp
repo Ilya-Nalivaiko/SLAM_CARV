@@ -31,8 +31,6 @@ namespace ORB_SLAM2
             //return;
         }
 
-        UpdateModel();
-
         std::vector<dlovi::Matrix>& points = GetPoints();
         std::list<dlovi::Matrix>& tris = GetTris();
 
