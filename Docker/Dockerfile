@@ -117,13 +117,26 @@ COPY . /root/orbslam3/SLAM_CARV
 
 
 
+RUN echo "[Dockerfile Info] Installing valgrind from source ......"
+RUN apt-get update && \
+    apt-get install -y build-essential wget libc6-dbg && \
+    cd /root && \
+    wget https://sourceware.org/pub/valgrind/valgrind-3.21.0.tar.bz2 && \
+    tar -xjf valgrind-3.21.0.tar.bz2 && \
+    cd valgrind-3.21.0 && \
+    ./configure && \
+    make -j$(nproc) && \
+    make install
+
+
+
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from local source ......"
 
 RUN cd /root/orbslam3/SLAM_CARV && \
 	rm -rf build && \
     chmod +x build.sh && \
     ./build.sh && \
-    chmod +x /root/orbslam3/SLAM_CARV/run.sh
+    chmod +x /root/orbslam3/SLAM_CARV/run.sh /root/orbslam3/SLAM_CARV/valrun.sh
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
