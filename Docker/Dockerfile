@@ -107,15 +107,8 @@ RUN apt-get update && apt-get install -y \
     ros-noetic-libg2o \
     libzmq3-dev
 
-# -----------------------------------
-# Runtime image: adds source & builds
-# -----------------------------------
-FROM base AS runtime
 
-WORKDIR /root/orbslam3/SLAM_CARV
-COPY . /root/orbslam3/SLAM_CARV
-
-
+# debug: install valgrind from source
 
 RUN echo "[Dockerfile Info] Installing valgrind from source ......"
 RUN apt-get update && \
@@ -128,7 +121,13 @@ RUN apt-get update && \
     make -j$(nproc) && \
     make install
 
+# -----------------------------------
+# Runtime image: adds source & builds
+# -----------------------------------
+FROM base AS runtime
 
+WORKDIR /root/orbslam3/SLAM_CARV
+COPY . /root/orbslam3/SLAM_CARV
 
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from local source ......"
 
