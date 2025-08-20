@@ -43,6 +43,5 @@ tools/*
 #vs code files
 .vscode/*
 
-# camera catkin build
-camera/build
-camera/devel
+# test data
+test_data/*.mp4

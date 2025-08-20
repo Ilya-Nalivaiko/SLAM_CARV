@@ -140,7 +140,7 @@ RUN cd /root/orbslam3/SLAM_CARV && \
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
-RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh
+RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh /root/orbslam3/SLAM_CARV/mp4_video.sh
 
 
 
@@ -151,20 +151,21 @@ SHELL ["/bin/bash", "-c"]
 
     # set up ROS for runtime
 RUN printf 'source /opt/ros/noetic/setup.bash\n' >> /root/.bashrc && \
-    printf 'export ROS_PACKAGE_PATH=/root/orbslam3/SLAM_CARV/Examples/ROS:/root/orbslam3/SLAM_CARV/mjpeg_cam_publisher:$ROS_PACKAGE_PATH\n' >> /root/.bashrc && \
+    printf 'export ROS_PACKAGE_PATH=/root/orbslam3/SLAM_CARV/Examples/ROS:/root/orbslam3/SLAM_CARV/ros_cam_publishers:$ROS_PACKAGE_PATH\n' >> /root/.bashrc && \
     # Do it again for the build because sourcing .bashrc doesnt work for whatever reason
     source /opt/ros/noetic/setup.bash && \
-    export ROS_PACKAGE_PATH=/root/orbslam3/SLAM_CARV/Examples/ROS:/root/orbslam3/SLAM_CARV/mjpeg_cam_publisher:$ROS_PACKAGE_PATH && \
+    export ROS_PACKAGE_PATH=/root/orbslam3/SLAM_CARV/Examples/ROS:/root/orbslam3/SLAM_CARV/ros_cam_publishers:$ROS_PACKAGE_PATH && \
     # verify packages can be seen
     rospack profile && \
     rospack find ORB_CARV_Pub >/dev/null && \
-    rospack find mjpeg_cam_publisher >/dev/null && \
+    rospack find ros_cam_publishers >/dev/null && \
     # build main package
     cd /root/orbslam3/SLAM_CARV && \
     chmod +x build_ros.sh && \
     ./build_ros.sh && \
     # Make Python work
-    chmod +x /root/orbslam3/SLAM_CARV/mjpeg_cam_publisher/scripts/mjpeg_camera_node.py
+    chmod +x /root/orbslam3/SLAM_CARV/ros_cam_publishers/scripts/mjpeg_camera_node.py && \
+    chmod +x /root/orbslam3/SLAM_CARV/ros_cam_publishers/scripts/mp4_camera_node.py
 
 
 

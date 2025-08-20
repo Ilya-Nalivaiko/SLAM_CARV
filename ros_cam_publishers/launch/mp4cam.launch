@@ -1,0 +1,29 @@
+<launch>
+  <!-- Path to the video file -->
+  <arg name="file" default="$(find ros_cam_publishers)/videos/test.mp4"/>
+  
+  <!-- Override FPS (0 = use file FPS) -->
+  <arg name="fps" default="0"/>
+  
+  <!-- Loop video when it ends -->
+  <arg name="loop" default="true"/>
+  
+  <!-- Frame ID -->
+  <arg name="frame_id" default="camera"/>
+  
+  <!-- Optional resize -->
+  <arg name="resize_width"  default="0"/>
+  <arg name="resize_height" default="0"/>
+
+  <node pkg="ros_cam_publishers"
+        type="mp4_camera_node.py"
+        name="mp4_camera"
+        output="screen">
+    <param name="file"          value="$(arg file)"/>
+    <param name="fps"           value="$(arg fps)"/>
+    <param name="loop"          value="$(arg loop)"/>
+    <param name="frame_id"      value="$(arg frame_id)"/>
+    <param name="resize_width"  value="$(arg resize_width)"/>
+    <param name="resize_height" value="$(arg resize_height)"/>
+  </node>
+</launch>

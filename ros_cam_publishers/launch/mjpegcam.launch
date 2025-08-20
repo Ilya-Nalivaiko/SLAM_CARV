@@ -1,7 +1,7 @@
 <launch>
   <arg name="ip" default="192.168.1.109"/>
 
-  <node pkg="mjpeg_cam_publisher"
+  <node pkg="ros_cam_publishers"
         type="mjpeg_camera_node.py"
         name="mjpeg_camera"
         output="screen">
