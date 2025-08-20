@@ -314,11 +314,17 @@ namespace dlovi {
         set<pair<int, int>, Delaunay3CellInfo::LtConstraint> setUnionedConstraints;
         set<Delaunay3::Cell_handle> setNewCells;
 
-        int vertexIndex = m_mapPoint_VertexHandle[pointIndex];
+        map<int,int>::const_iterator itVI = m_mapPoint_VertexHandle.find(pointIndex);
+        if (itVI == m_mapPoint_VertexHandle.end())
+            return;
+        int vertexIndex = itVI->second;
 
         hndlQ = vecVertexHandles[vertexIndex];
 
-        // TODO：DEBUG data corruption
+        
+        if (vertexIndex < 0 || vertexIndex >= (int)vecVertexHandles.size())
+            return;
+// TODO：DEBUG data corruption
         if (! dt.is_vertex(hndlQ))
             return;
 
@@ -360,9 +366,13 @@ namespace dlovi {
 
         // Step 4:
         for (set<pair<int, int>, Delaunay3CellInfo::LtConstraint>::iterator itConstraint = setUnionedConstraints.begin(); itConstraint != setUnionedConstraints.end(); itConstraint++) {
-            Segment QO = Segment(vecVertexHandles[itConstraint->second]->point(),
+            const int idx = itConstraint->second;
+            if (idx < 0 || idx >= (int)vecVertexHandles.size()) continue;
+            Delaunay3::Vertex_handle vh = vecVertexHandles[idx];
+            if (vh == Delaunay3::Vertex_handle() || !dt.is_vertex(vh)) continue;
+            Segment QO = Segment(vh->point(),
                                  PointD3(getCamCenter(itConstraint->first)(0), getCamCenter(itConstraint->first)(1), getCamCenter(itConstraint->first)(2)));
-            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vecVertexHandles[itConstraint->second], QO, itConstraint->first, itConstraint->second, true);
+            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vh, QO, itConstraint->first, idx, true);
         }
         for (set<Delaunay3::Cell_handle>::iterator itCell = setNewCells.begin(); itCell != setNewCells.end(); itCell++)
             (*itCell)->info().markOld();
@@ -384,10 +394,16 @@ namespace dlovi {
 
         for (set<int>::const_iterator itPointIndex = setPointIndices.begin(); itPointIndex != setPointIndices.end(); itPointIndex++) {
             int pointIndex = *itPointIndex;
-            int vertexIndex = m_mapPoint_VertexHandle[pointIndex];
+            map<int,int>::const_iterator itVI = m_mapPoint_VertexHandle.find(pointIndex);
+        if (itVI == m_mapPoint_VertexHandle.end())
+            return;
+        int vertexIndex = itVI->second;
             hndlQ = vecVertexHandles[vertexIndex];
 
-            // Step 1:
+            
+        if (vertexIndex < 0 || vertexIndex >= (int)vecVertexHandles.size())
+            return;
+// Step 1:
             set<Delaunay3::Cell_handle> setIncidentCells;
             dt.incident_cells(hndlQ, std::inserter(setIncidentCells, setIncidentCells.begin()));
 
@@ -428,9 +444,13 @@ namespace dlovi {
 
         // Step 5:
         for (set<pair<int, int>, Delaunay3CellInfo::LtConstraint>::iterator itConstraint = setUnionedConstraints.begin(); itConstraint != setUnionedConstraints.end(); itConstraint++) {
-            Segment QO = Segment(vecVertexHandles[itConstraint->second]->point(),
+            const int idx = itConstraint->second;
+            if (idx < 0 || idx >= (int)vecVertexHandles.size()) continue;
+            Delaunay3::Vertex_handle vh = vecVertexHandles[idx];
+            if (vh == Delaunay3::Vertex_handle() || !dt.is_vertex(vh)) continue;
+            Segment QO = Segment(vh->point(),
                                  PointD3(getCamCenter(itConstraint->first)(0), getCamCenter(itConstraint->first)(1), getCamCenter(itConstraint->first)(2)));
-            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vecVertexHandles[itConstraint->second], QO, itConstraint->first, itConstraint->second, true);
+            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vh, QO, itConstraint->first, idx, true);
         }
         for (set<Delaunay3::Cell_handle>::iterator itCell = setNewCells.begin(); itCell != setNewCells.end(); itCell++)
             (*itCell)->info().markOld();
@@ -455,9 +475,15 @@ namespace dlovi {
         set<pair<int, int>, Delaunay3CellInfo::LtConstraint> setUnionedMovedConstraints;
         set<Delaunay3::Cell_handle> setNewCells;
 
-        int vertexIndex = m_mapPoint_VertexHandle[pointIndex];
+        map<int,int>::const_iterator itVI = m_mapPoint_VertexHandle.find(pointIndex);
+        if (itVI == m_mapPoint_VertexHandle.end())
+            return;
+        int vertexIndex = itVI->second;
         hndlQ = vecVertexHandles[vertexIndex];
-        PointD3 pd3NewPoint(getPoint(pointIndex)(0), getPoint(pointIndex)(1), getPoint(pointIndex)(2));
+        
+        if (vertexIndex < 0 || vertexIndex >= (int)vecVertexHandles.size())
+            return;
+PointD3 pd3NewPoint(getPoint(pointIndex)(0), getPoint(pointIndex)(1), getPoint(pointIndex)(2));
 
         // TODO: DEBUG: PTAM has minor data corruption bugs, and this hack handles the bad data being passed to our code.  Should fix PTAM instead.
         if (! dt.is_vertex(hndlQ))
@@ -534,17 +560,23 @@ namespace dlovi {
         // Step 7
         for (set<pair<int, int>, Delaunay3CellInfo::LtConstraint>::iterator itConstraint = setUnionedStationaryConstraints.begin();
              itConstraint != setUnionedStationaryConstraints.end(); itConstraint++) {
-            Segment QO = Segment(vecVertexHandles[itConstraint->second]->point(),
+            const int idx = itConstraint->second;
+            if (idx < 0 || idx >= (int)vecVertexHandles.size()) continue;
+            Delaunay3::Vertex_handle vh = vecVertexHandles[idx];
+            if (vh == Delaunay3::Vertex_handle() || !dt.is_vertex(vh)) continue;
+            Segment QO = Segment(vh->point(),
                                  PointD3(getCamCenter(itConstraint->first)(0), getCamCenter(itConstraint->first)(1), getCamCenter(itConstraint->first)(2)));
-            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vecVertexHandles[itConstraint->second], QO,
-                                                            itConstraint->first, itConstraint->second, true);
+            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vh, QO, itConstraint->first, idx, true);
         }
         for (set<pair<int, int>, Delaunay3CellInfo::LtConstraint>::iterator itConstraint = setUnionedMovedConstraints.begin();
              itConstraint != setUnionedMovedConstraints.end(); itConstraint++) {
-            Segment QO = Segment(vecVertexHandles[itConstraint->second]->point(),
+            const int idx = itConstraint->second;
+            if (idx < 0 || idx >= (int)vecVertexHandles.size()) continue;
+            Delaunay3::Vertex_handle vh = vecVertexHandles[idx];
+            if (vh == Delaunay3::Vertex_handle() || !dt.is_vertex(vh)) continue;
+            Segment QO = Segment(vh->point(),
                                  PointD3(getCamCenter(itConstraint->first)(0), getCamCenter(itConstraint->first)(1), getCamCenter(itConstraint->first)(2)));
-            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vecVertexHandles[itConstraint->second], QO,
-                                                            itConstraint->first, itConstraint->second, false);
+            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vh, QO, itConstraint->first, idx, false);
         }
         for (set<Delaunay3::Cell_handle>::iterator itCell = setNewCells.begin(); itCell != setNewCells.end(); itCell++)
             (*itCell)->info().markOld();
@@ -574,9 +606,18 @@ namespace dlovi {
 
         // TODO: DEBUG: PTAM has minor data corruption bugs, and this hack handles the bad data being passed to our code.  Should fix PTAM instead.
         for (vector<int>::const_iterator it = arrPointIndices.begin(); it != arrPointIndices.end(); it++) {
-            int vertexIndex = m_mapPoint_VertexHandle[*it];
+            map<int,int>::const_iterator itVI = m_mapPoint_VertexHandle.find(*it);
+        if (itVI == m_mapPoint_VertexHandle.end())
+            return;
+        int vertexIndex = itVI->second;
             Delaunay3::Vertex_handle hndlQ = vecVertexHandles[vertexIndex];
-            if (! dt.is_vertex(hndlQ))
+            
+        
+            if (vertexIndex < 0 || vertexIndex >= (int)vecVertexHandles.size())
+                continue;
+if (vertexIndex < 0 || vertexIndex >= (int)vecVertexHandles.size())
+            return;
+if (! dt.is_vertex(hndlQ))
                 continue;
 
             arrVertexIndices.push_back(vertexIndex);
@@ -666,24 +707,33 @@ namespace dlovi {
         // Step 7
         for (set<pair<int, int>, Delaunay3CellInfo::LtConstraint>::iterator itConstraint = setUnionedStationaryConstraints.begin();
              itConstraint != setUnionedStationaryConstraints.end(); itConstraint++) {
-            Segment QO = Segment(vecVertexHandles[itConstraint->second]->point(),
+            const int idx = itConstraint->second;
+            if (idx < 0 || idx >= (int)vecVertexHandles.size()) continue;
+            Delaunay3::Vertex_handle vh = vecVertexHandles[idx];
+            if (vh == Delaunay3::Vertex_handle() || !dt.is_vertex(vh)) continue;
+            Segment QO = Segment(vh->point(),
                                  PointD3(getCamCenter(itConstraint->first)(0), getCamCenter(itConstraint->first)(1), getCamCenter(itConstraint->first)(2)));
-            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vecVertexHandles[itConstraint->second], QO,
-                                                            itConstraint->first, itConstraint->second, true);
+            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vh, QO, itConstraint->first, idx, true);
         }
         for (set<pair<int, int>, Delaunay3CellInfo::LtConstraint>::iterator itConstraint = setUnionedMovedConstraints.begin();
              itConstraint != setUnionedMovedConstraints.end(); itConstraint++) {
-            Segment QO = Segment(vecVertexHandles[itConstraint->second]->point(),
+            const int idx = itConstraint->second;
+            if (idx < 0 || idx >= (int)vecVertexHandles.size()) continue;
+            Delaunay3::Vertex_handle vh = vecVertexHandles[idx];
+            if (vh == Delaunay3::Vertex_handle() || !dt.is_vertex(vh)) continue;
+            Segment QO = Segment(vh->point(),
                                  PointD3(getCamCenter(itConstraint->first)(0), getCamCenter(itConstraint->first)(1), getCamCenter(itConstraint->first)(2)));
-            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vecVertexHandles[itConstraint->second], QO,
-                                                            itConstraint->first, itConstraint->second, false);
+            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vh, QO, itConstraint->first, idx, false);
         }
         for (set<Delaunay3::Cell_handle>::iterator itCell = setNewCells.begin(); itCell != setNewCells.end(); itCell++)
             (*itCell)->info().markOld();
     }
 
     void FreespaceDelaunayAlgorithm::applyConstraint(Delaunay3 & dt, vector<Delaunay3::Vertex_handle> & vecVertexHandles, const int camIndex, const int pointIndex) const {
-        int vertexIndex = m_mapPoint_VertexHandle[pointIndex];
+        map<int,int>::const_iterator itVI = m_mapPoint_VertexHandle.find(pointIndex);
+        if (itVI == m_mapPoint_VertexHandle.end())
+            return;
+        int vertexIndex = itVI->second;
 
         // TODO: DEBUG: PTAM has minor data corruption bugs, and this hack handles the bad data being passed to our code.  Should fix PTAM instead.
         if (! dt.is_vertex(vecVertexHandles[vertexIndex]))
@@ -694,7 +744,10 @@ namespace dlovi {
     }
 
     void FreespaceDelaunayAlgorithm::removeConstraint(Delaunay3 & dt, vector<Delaunay3::Vertex_handle> & vecVertexHandles, const int camIndex, const int pointIndex) const {
-        int vertexIndex = m_mapPoint_VertexHandle[pointIndex];
+        map<int,int>::const_iterator itVI = m_mapPoint_VertexHandle.find(pointIndex);
+        if (itVI == m_mapPoint_VertexHandle.end())
+            return;
+        int vertexIndex = itVI->second;
         // TODO: DEBUG: PTAM has minor data corruption bugs, and this hack handles the bad data being passed to our code.  Should fix PTAM instead.
         if (! dt.is_vertex(vecVertexHandles[vertexIndex]))
             return;
@@ -843,7 +896,13 @@ namespace dlovi {
         matO(1) = constraint.target().y();
         matO(2) = constraint.target().z();
 
-        // For all tetrahedra t incident to Q:
+        
+        // Defensive: ensure the vertex handle is valid in the current triangulation.
+        if (hndlQ == Delaunay3::Vertex_handle() || !dt.is_vertex(hndlQ)) {
+            return;
+        }
+
+// For all tetrahedra t incident to Q:
         vector<Delaunay3::Cell_handle> vecQCells;
         dt.incident_cells(hndlQ, std::back_inserter(vecQCells));
         vector<Delaunay3::Cell_handle>::iterator itQCells;
@@ -1078,9 +1137,13 @@ namespace dlovi {
         for (i = oldNumVertices; i < (int)vecVertexHandles.size(); i++)
             dt.incident_cells(vecVertexHandles[i], std::inserter(setNewCells, setNewCells.begin()));
         for (set<pair<int, int>, Delaunay3CellInfo::LtConstraint>::iterator itConstraint = setUnionedConstraints.begin(); itConstraint != setUnionedConstraints.end(); itConstraint++) {
-            Segment QO = Segment(vecVertexHandles[itConstraint->second]->point(),
+            const int idx = itConstraint->second;
+            if (idx < 0 || idx >= (int)vecVertexHandles.size()) continue;
+            Delaunay3::Vertex_handle vh = vecVertexHandles[idx];
+            if (vh == Delaunay3::Vertex_handle() || !dt.is_vertex(vh)) continue;
+            Segment QO = Segment(vh->point(),
                                  PointD3(getCamCenter(itConstraint->first)(0), getCamCenter(itConstraint->first)(1), getCamCenter(itConstraint->first)(2)));
-            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vecVertexHandles[itConstraint->second], QO, itConstraint->first, itConstraint->second, true);
+            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, vh, QO, itConstraint->first, idx, true);
         }
         for (set<Delaunay3::Cell_handle>::iterator itCell = setNewCells.begin(); itCell != setNewCells.end(); itCell++)
             (*itCell)->info().markOld();
