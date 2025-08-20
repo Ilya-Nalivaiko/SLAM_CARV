@@ -139,7 +139,7 @@ RUN cd /root/orbslam3/SLAM_CARV && \
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
-RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh /root/orbslam3/SLAM_CARV/mp4_video.sh
+RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh /root/orbslam3/SLAM_CARV/mp4_video.sh /root/orbslam3/SLAM_CARV/tum_video.sh
 
 
 
@@ -164,7 +164,8 @@ RUN printf 'source /opt/ros/noetic/setup.bash\n' >> /root/.bashrc && \
     ./build_ros.sh && \
     # Make Python work
     chmod +x /root/orbslam3/SLAM_CARV/ros_cam_publishers/scripts/mjpeg_camera_node.py && \
-    chmod +x /root/orbslam3/SLAM_CARV/ros_cam_publishers/scripts/mp4_camera_node.py
+    chmod +x /root/orbslam3/SLAM_CARV/ros_cam_publishers/scripts/mp4_camera_node.py && \
+    chmod +x /root/orbslam3/SLAM_CARV/ros_cam_publishers/scripts/tum_camera_node.py
 
 
 

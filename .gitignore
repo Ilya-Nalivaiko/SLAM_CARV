@@ -44,4 +44,4 @@ tools/*
 .vscode/*
 
 # test data
-test_data/*.mp4
+test_data/

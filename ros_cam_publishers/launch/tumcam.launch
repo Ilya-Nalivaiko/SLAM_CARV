@@ -1,0 +1,30 @@
+<launch>
+  <!-- Root of TUM dataset (contains rgb.txt, rgb/, etc.) -->
+  <arg name="dataset_dir" default="$(find ros_cam_publishers)/dataset"/>
+  
+  <!-- Loop sequence when it ends -->
+  <arg name="loop" default="true"/>
+  
+  <!-- Frame ID -->
+  <arg name="frame_id" default="camera"/>
+  
+  <!-- Optional resize -->
+  <arg name="resize_width"  default="0"/>
+  <arg name="resize_height" default="0"/>
+  
+  <!-- Playback speed factor (1.0 = realtime, >1 faster, <1 slower) -->
+  <arg name="time_scale" default="1.0"/>
+
+  <node pkg="ros_cam_publishers"
+        type="tum_camera_node.py"
+        name="tum_rgb_camera"
+        output="screen">
+    <param name="dir"           value="$(arg dataset_dir)"/>
+    <param name="list_file"     value="$(arg dataset_dir)/rgb.txt"/>
+    <param name="loop"          value="$(arg loop)"/>
+    <param name="frame_id"      value="$(arg frame_id)"/>
+    <param name="resize_width"  value="$(arg resize_width)"/>
+    <param name="resize_height" value="$(arg resize_height)"/>
+    <param name="time_scale"    value="$(arg time_scale)"/>
+  </node>
+</launch>
