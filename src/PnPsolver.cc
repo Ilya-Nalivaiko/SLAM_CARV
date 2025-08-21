@@ -62,6 +62,12 @@
 
 using namespace std;
 
+// SAFETY: small helpers for bounds/finite checks
+namespace {
+inline bool in_bounds(size_t i, size_t n) { return i < n; }
+inline bool finite3(const cv::Point3f& p){ return std::isfinite(p.x) && std::isfinite(p.y) && std::isfinite(p.z); }
+}
+
 namespace ORB_SLAM2
 {
 
@@ -154,6 +160,7 @@ void PnPsolver::SetRansacParameters(double probability, int minInliers, int maxI
     mRansacMaxIts = max(1,min(nIterations,mRansacMaxIts));
 
     mvMaxError.resize(mvSigma2.size());
+    mvMaxError.resize(mvSigma2.size()); // SAFETY: ensure sized
     for(size_t i=0; i<mvSigma2.size(); i++)
         mvMaxError[i] = mvSigma2[i]*th2;
 }
@@ -195,7 +202,8 @@ cv::Mat PnPsolver::iterate(int nIterations, bool &bNoMore, vector<bool> &vbInlie
             int randi = DUtils::Random::RandomInt(0, vAvailableIndices.size()-1);
 
             int idx = vAvailableIndices[randi];
-
+            // SAFETY: bounds guard for random selection
+            if(!(in_bounds(idx, mvP3Dw.size()) && in_bounds(idx, mvP2D.size()))) { vAvailableIndices[randi] = vAvailableIndices.back(); vAvailableIndices.pop_back(); continue; }
             add_correspondence(mvP3Dw[idx].x,mvP3Dw[idx].y,mvP3Dw[idx].z,mvP2D[idx].x,mvP2D[idx].y);
 
             vAvailableIndices[randi] = vAvailableIndices.back();
@@ -279,7 +287,9 @@ bool PnPsolver::Refine()
     for(size_t i=0; i<vIndices.size(); i++)
     {
         int idx = vIndices[i];
-        add_correspondence(mvP3Dw[idx].x,mvP3Dw[idx].y,mvP3Dw[idx].z,mvP2D[idx].x,mvP2D[idx].y);
+    // SAFETY: bounds guard for inlier index
+    if(!(in_bounds(idx, mvP3Dw.size()) && in_bounds(idx, mvP2D.size()))) continue;
+    add_correspondence(mvP3Dw[idx].x,mvP3Dw[idx].y,mvP3Dw[idx].z,mvP2D[idx].x,mvP2D[idx].y);
     }
 
     // Compute camera pose

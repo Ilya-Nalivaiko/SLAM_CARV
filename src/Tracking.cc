@@ -44,6 +44,9 @@ using namespace std;
 namespace ORB_SLAM2
 {
 
+    // SAFETY: serialize tracking critical sections
+    static std::mutex g_trackMutex;
+
     Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor):
             mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
             mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys), mpViewer(NULL),
@@ -470,7 +473,7 @@ namespace ORB_SLAM2
                         if(pMP->Observations()<1)
                         {
                             mCurrentFrame.mvbOutlier[i] = false;
-                            mCurrentFrame.mvpMapPoints[i]=static_cast<MapPoint*>(NULL);
+                            if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =static_cast<MapPoint*>(NULL);
                         }
                 }
 
@@ -493,7 +496,7 @@ namespace ORB_SLAM2
                 for(int i=0; i<mCurrentFrame.N;i++)
                 {
                     if(mCurrentFrame.mvpMapPoints[i] && mCurrentFrame.mvbOutlier[i])
-                        mCurrentFrame.mvpMapPoints[i]=static_cast<MapPoint*>(NULL);
+                        if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =static_cast<MapPoint*>(NULL);
                 }
             }
 
@@ -562,7 +565,7 @@ namespace ORB_SLAM2
                     pNewMP->UpdateNormalAndDepth();
                     mpMap->AddMapPoint(pNewMP);
 
-                    mCurrentFrame.mvpMapPoints[i]=pNewMP;
+                    if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =pNewMP;
                 }
             }
 
@@ -813,7 +816,7 @@ namespace ORB_SLAM2
                 {
                     MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
 
-                    mCurrentFrame.mvpMapPoints[i]=static_cast<MapPoint*>(NULL);
+                    if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =static_cast<MapPoint*>(NULL);
                     mCurrentFrame.mvbOutlier[i]=false;
                     pMP->mbTrackInView = false;
                     pMP->mnLastFrameSeen = mCurrentFrame.mnId;
@@ -936,7 +939,7 @@ namespace ORB_SLAM2
                 {
                     MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
 
-                    mCurrentFrame.mvpMapPoints[i]=static_cast<MapPoint*>(NULL);
+                    if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =static_cast<MapPoint*>(NULL);
                     mCurrentFrame.mvbOutlier[i]=false;
                     pMP->mbTrackInView = false;
                     pMP->mnLastFrameSeen = mCurrentFrame.mnId;
@@ -986,7 +989,7 @@ namespace ORB_SLAM2
                         mnMatchesInliers++;
                 }
                 else if(mSensor==System::STEREO)
-                    mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
+                    if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
 
             }
         }
@@ -1134,7 +1137,7 @@ namespace ORB_SLAM2
                     else if(pMP->Observations()<1)
                     {
                         bCreateNew = true;
-                        mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
+                        if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
                     }
 
                     if(bCreateNew)
@@ -1147,7 +1150,7 @@ namespace ORB_SLAM2
                         pNewMP->UpdateNormalAndDepth();
                         mpMap->AddMapPoint(pNewMP);
 
-                        mCurrentFrame.mvpMapPoints[i]=pNewMP;
+                        if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =pNewMP;
                         nPoints++;
                     }
                     else
@@ -1274,7 +1277,7 @@ namespace ORB_SLAM2
                 }
                 else
                 {
-                    mCurrentFrame.mvpMapPoints[i]=NULL;
+                    if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =NULL;
                 }
             }
         }
@@ -1369,6 +1372,9 @@ namespace ORB_SLAM2
 
     bool Tracking::Relocalization()
     {
+    // SAFETY: protect from concurrent access
+    std::lock_guard<std::mutex> lk(g_trackMutex);
+
         // Compute Bag of Words Vector
         mCurrentFrame.ComputeBoW();
 
@@ -1459,11 +1465,11 @@ namespace ORB_SLAM2
                     {
                         if(vbInliers[j])
                         {
-                            mCurrentFrame.mvpMapPoints[j]=vvpMapPointMatches[i][j];
+                            if((j)>=0 && (j)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[j] =vvpMapPointMatches[i][j];
                             sFound.insert(vvpMapPointMatches[i][j]);
                         }
                         else
-                            mCurrentFrame.mvpMapPoints[j]=NULL;
+                            if((j)>=0 && (j)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[j] =NULL;
                     }
 
                     int nGood = Optimizer::PoseOptimization(&mCurrentFrame);
@@ -1473,7 +1479,7 @@ namespace ORB_SLAM2
 
                     for(int io =0; io<mCurrentFrame.N; io++)
                         if(mCurrentFrame.mvbOutlier[io])
-                            mCurrentFrame.mvpMapPoints[io]=static_cast<MapPoint*>(NULL);
+                            if((io)>=0 && (io)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[io] =static_cast<MapPoint*>(NULL);
 
                     // If few inliers, search by projection in a coarse window and optimize again
                     if(nGood<50)
@@ -1501,7 +1507,7 @@ namespace ORB_SLAM2
 
                                     for(int io =0; io<mCurrentFrame.N; io++)
                                         if(mCurrentFrame.mvbOutlier[io])
-                                            mCurrentFrame.mvpMapPoints[io]=NULL;
+                                            if((io)>=0 && (io)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[io] =NULL;
                                 }
                             }
                         }
