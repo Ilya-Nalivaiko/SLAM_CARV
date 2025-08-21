@@ -28,8 +28,15 @@
 #include "Modeler/FreespaceDelaunayAlgorithm.h"
 #include <sys/time.h>
 #include <algorithm>
+#include <mutex>
+#include <cmath>
 
 namespace dlovi {
+
+    // File-scope mutex to serialize access to CGAL triangulation and shared containers.
+    // SAFETY: prevents data races between threads calling FreespaceDelaunayAlgorithm concurrently.
+    static std::mutex g_tdsMutex;
+
 
     // Constructors
 
@@ -303,6 +310,9 @@ namespace dlovi {
 
 
     void FreespaceDelaunayAlgorithm::removeVertex(Delaunay3 & dt, vector<Delaunay3::Vertex_handle> & vecVertexHandles, const int pointIndex) const {
+        // SAFETY: serialize access to triangulation / shared state
+        std::lock_guard<std::mutex> lk(g_tdsMutex);
+
         // Vertex Deletion Algorithm:
         // ~~~~~~~~~~~~~~~~~~~~
         // Step 1: Collect FS constraints into a unioned set from incident cells.  Don't add FS constraints containing the vertex to be deleted.
@@ -343,6 +353,8 @@ namespace dlovi {
         // Step 2:
         dt.remove(hndlQ);
         vecVertexHandles[vertexIndex] = Delaunay3::Vertex_handle();
+        // SAFETY: keep point->vertex map consistent after deletion
+        m_mapPoint_VertexHandle.erase(pointIndex);
 
         // Step 3:
         for (Delaunay3::Finite_cells_iterator itCell = dt.finite_cells_begin(); itCell != dt.finite_cells_end(); itCell++) {
@@ -380,6 +392,9 @@ namespace dlovi {
 
     // TODO: The following function is both buggy and untested.  We've used the single-vertex-deletion version of this function in our testing and experiments.
     void FreespaceDelaunayAlgorithm::removeVertex(Delaunay3 & dt, vector<Delaunay3::Vertex_handle> & vecVertexHandles, const set<int> & setPointIndices) const {
+        // SAFETY: serialize access to triangulation / shared state
+        std::lock_guard<std::mutex> lk(g_tdsMutex);
+
         // Vertex Deletion Algorithm:
         // ~~~~~~~~~~~~~~~~~~~~
         // Step 1: Collect FS constraints into a unioned set from incident cells.  Don't add FS constraints containing the vertex to be deleted.
@@ -418,6 +433,9 @@ namespace dlovi {
 
             // Step 2:
             dt.remove(hndlQ);
+            vecVertexHandles[vertexIndex] = Delaunay3::Vertex_handle();
+            // SAFETY: keep point->vertex map consistent after deletion
+            m_mapPoint_VertexHandle.erase(pointIndex);
             setRemovedVertexIndices.insert(setRemovedVertexIndices.end(), vertexIndex);
         }
 
@@ -457,6 +475,9 @@ namespace dlovi {
     }
 
     void FreespaceDelaunayAlgorithm::moveVertex(Delaunay3 & dt, vector<Delaunay3::Vertex_handle> & vecVertexHandles, const int pointIndex) const {
+        // SAFETY: serialize access to triangulation / shared state
+        std::lock_guard<std::mutex> lk(g_tdsMutex);
+
         // Vertex Moving Algorithm:
         // ~~~~~~~~~~~~~~~~~~~~
         // Step 1: Collect FS constraints into two unioned sets from incident cells.  FS constraints containing the vertex to be moved go to their own set.
@@ -484,6 +505,11 @@ namespace dlovi {
         if (vertexIndex < 0 || vertexIndex >= (int)vecVertexHandles.size())
             return;
 PointD3 pd3NewPoint(getPoint(pointIndex)(0), getPoint(pointIndex)(1), getPoint(pointIndex)(2));
+        // SAFETY: ensure target coordinates are finite
+        if (!(std::isfinite(pd3NewPoint.x()) && std::isfinite(pd3NewPoint.y()) && std::isfinite(pd3NewPoint.z()))) {
+            std::cerr << "Error in FreespaceDelaunayAlgorithm::moveVertex(): Non-finite destination; aborting move\n";
+            return;
+        }
 
         // TODO: DEBUG: PTAM has minor data corruption bugs, and this hack handles the bad data being passed to our code.  Should fix PTAM instead.
         if (! dt.is_vertex(hndlQ))
@@ -583,6 +609,9 @@ PointD3 pd3NewPoint(getPoint(pointIndex)(0), getPoint(pointIndex)(1), getPoint(p
     }
 
     void FreespaceDelaunayAlgorithm::moveVertex(Delaunay3 & dt, vector<Delaunay3::Vertex_handle> & vecVertexHandles, const vector<int> & arrPointIndices) const {
+        // SAFETY: serialize access to triangulation / shared state
+        std::lock_guard<std::mutex> lk(g_tdsMutex);
+
         // Vertex Moving Algorithm:
         // ~~~~~~~~~~~~~~~~~~~~
         // Step 1: Collect FS constraints into two unioned sets from incident cells.  FS constraints containing the vertices to be moved go to their own set.
@@ -622,7 +651,14 @@ if (! dt.is_vertex(hndlQ))
 
             arrVertexIndices.push_back(vertexIndex);
             arrHndlQ.push_back(hndlQ);
-            arrPd3NewPoints.push_back(PointD3(getPoint(*it)(0), getPoint(*it)(1), getPoint(*it)(2)));
+            {
+                PointD3 _p(getPoint(*it)(0), getPoint(*it)(1), getPoint(*it)(2));
+                if (!(std::isfinite(_p.x()) && std::isfinite(_p.y()) && std::isfinite(_p.z()))) {
+                    std::cerr << "Error in FreespaceDelaunayAlgorithm::moveVertex(batch): Non-finite destination for point index " << *it << "; skipping\n";
+                    continue;
+                }
+                arrPd3NewPoints.push_back(_p);
+            }
         }
         if (arrVertexIndices.size() == 0)
             return;
@@ -730,10 +766,15 @@ if (! dt.is_vertex(hndlQ))
     }
 
     void FreespaceDelaunayAlgorithm::applyConstraint(Delaunay3 & dt, vector<Delaunay3::Vertex_handle> & vecVertexHandles, const int camIndex, const int pointIndex) const {
+        // SAFETY: serialize access to triangulation / shared state
+        std::lock_guard<std::mutex> lk(g_tdsMutex);
+
         map<int,int>::const_iterator itVI = m_mapPoint_VertexHandle.find(pointIndex);
         if (itVI == m_mapPoint_VertexHandle.end())
             return;
         int vertexIndex = itVI->second;
+        if (vertexIndex < 0 || vertexIndex >= (int)vecVertexHandles.size())
+            return;
 
         // TODO: DEBUG: PTAM has minor data corruption bugs, and this hack handles the bad data being passed to our code.  Should fix PTAM instead.
         if (! dt.is_vertex(vecVertexHandles[vertexIndex]))
@@ -744,10 +785,15 @@ if (! dt.is_vertex(hndlQ))
     }
 
     void FreespaceDelaunayAlgorithm::removeConstraint(Delaunay3 & dt, vector<Delaunay3::Vertex_handle> & vecVertexHandles, const int camIndex, const int pointIndex) const {
+        // SAFETY: serialize access to triangulation / shared state
+        std::lock_guard<std::mutex> lk(g_tdsMutex);
+
         map<int,int>::const_iterator itVI = m_mapPoint_VertexHandle.find(pointIndex);
         if (itVI == m_mapPoint_VertexHandle.end())
             return;
         int vertexIndex = itVI->second;
+        if (vertexIndex < 0 || vertexIndex >= (int)vecVertexHandles.size())
+            return;
         // TODO: DEBUG: PTAM has minor data corruption bugs, and this hack handles the bad data being passed to our code.  Should fix PTAM instead.
         if (! dt.is_vertex(vecVertexHandles[vertexIndex]))
             return;
@@ -1066,6 +1112,9 @@ if (! dt.is_vertex(hndlQ))
 
     void FreespaceDelaunayAlgorithm::addNewlyObservedFeatures(Delaunay3 & dt, vector<Delaunay3::Vertex_handle> & vecVertexHandles,
                                                               vector<int> & localVisList, const vector<int> & originalLocalVisList) const {
+        // SAFETY: serialize access to triangulation / shared state
+        std::lock_guard<std::mutex> lk(g_tdsMutex);
+
 
         set<pair<int, int>, Delaunay3CellInfo::LtConstraint> setUnionedConstraints;
         int oldNumVertices = (int)vecVertexHandles.size();
