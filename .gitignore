@@ -45,3 +45,6 @@ tools/*
 
 # test data
 test_data/
+
+# log files
+*.log
