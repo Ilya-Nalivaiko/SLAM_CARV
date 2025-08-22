@@ -68,7 +68,7 @@ mkdir build
 cd build
 
 echo "[INFO] Running CMake configuration..."
-cmake .. -DCMAKE_BUILD_TYPE=Debug | tee ../cmake_configure.log
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" | tee ../cmake_configure.log
 CMAKE_EXIT_CODE=${PIPESTATUS[0]}
 if [ $CMAKE_EXIT_CODE -ne 0 ]; then
     echo "[ERROR] CMake configuration failed. Check cmake_configure.log."
