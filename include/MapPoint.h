@@ -111,6 +111,7 @@ public:
 
 
     static std::mutex mGlobalMutex;
+    std::mutex mMutexFeatures;
 
 protected:    
 
@@ -144,7 +145,6 @@ protected:
      Map* mpMap;
 
      std::mutex mMutexPos;
-     std::mutex mMutexFeatures;
 };
 
 } //namespace ORB_SLAM
