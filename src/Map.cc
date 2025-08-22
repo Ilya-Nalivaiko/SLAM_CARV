@@ -150,4 +150,29 @@ void Map::clear()
     mvpKeyFrameOrigins.clear();
 }
 
+void Map::DeferErase(MapPoint* pMP)
+{
+    // pMP is already detached & marked bad by SetBadFlag()/Replace()
+    std::lock_guard<std::mutex> lk(mMutexTrash);
+    mTrash.push_back(pMP);
+}
+
+void Map::CollectTrash()
+{
+    // Block Tracking while we actually free memory
+    std::unique_lock<std::mutex> lkUpdate(mMutexMapUpdate);   // existing map-update mutex
+
+    std::list<MapPoint*> to_delete;
+    {
+        std::lock_guard<std::mutex> lk(mMutexTrash);
+        to_delete.swap(mTrash);
+    }
+    // Now nobody else should hold references (Tracking is locked out and
+    // LocalMapping already removed observations)
+    for (MapPoint* p : to_delete) {
+        delete p;
+    }
+}
+
+
 } //namespace ORB_SLAM

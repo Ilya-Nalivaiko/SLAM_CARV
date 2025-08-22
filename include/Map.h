@@ -25,7 +25,7 @@
 #include "KeyFrame.h"
 
 #include <set>
-
+#include <list>
 #include <mutex>
 
 #include <iostream>
@@ -40,7 +40,15 @@ namespace ORB_SLAM2 {
     class Modeler;
 
     class Map {
+    private:
+        std::list<MapPoint*> mTrash;   // queued bad/replaced points
+        std::mutex           mMutexTrash;
+
     public:
+        // SAFETY: two‑phase deletion of MapPoints
+        void DeferErase(MapPoint* pMP);
+        void CollectTrash();
+
         Map();
 
         void AddKeyFrame(KeyFrame *pKF);

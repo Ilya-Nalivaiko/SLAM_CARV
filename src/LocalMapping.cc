@@ -69,7 +69,9 @@ namespace ORB_SLAM2
                 // Check recent MapPoints
                 MapPointCulling();
 
-                // Triangulate new MapPoints
+                
+        mpMap->CollectTrash(); // SAFETY: reclaim deferred MapPoints
+// Triangulate new MapPoints
                 CreateNewMapPoints();
 
                 if(!CheckNewKeyFrames())

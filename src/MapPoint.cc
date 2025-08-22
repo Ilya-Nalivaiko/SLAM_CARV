@@ -173,7 +173,7 @@ void MapPoint::SetBadFlag()
         pKF->EraseMapPointMatch(mit->second);
     }
 
-    mpMap->EraseMapPoint(this);
+    mpMap->DeferErase(this); // SAFETY: deferred delete
 }
 
 MapPoint* MapPoint::GetReplaced()
@@ -220,7 +220,7 @@ void MapPoint::Replace(MapPoint* pMP)
     pMP->IncreaseVisible(nvisible);
     pMP->ComputeDistinctiveDescriptors();
 
-    mpMap->EraseMapPoint(this);
+    mpMap->DeferErase(this); // SAFETY: deferred delete
 }
 
 bool MapPoint::isBad()

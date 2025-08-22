@@ -27,6 +27,7 @@
 #include "Thirdparty/g2o/g2o/core/robust_kernel_impl.h"
 #include "Thirdparty/g2o/g2o/solvers/linear_solver_dense.h"
 #include "Thirdparty/g2o/g2o/types/types_seven_dof_expmap.h"
+#include <unordered_set>
 
 #include<eigen3/Eigen/StdVector>
 
@@ -66,6 +67,8 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         optimizer.setForceStopFlag(pbStopFlag);
 
     long unsigned int maxKFid = 0;
+    // SAFETY: track which KF vertices are actually in the optimizer
+    std::unordered_set<long unsigned int> activeKFIds;
 
     // Set KeyFrame vertices
     for(size_t i=0; i<vpKFs.size(); i++)
@@ -78,6 +81,8 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         vSE3->setId(pKF->mnId);
         vSE3->setFixed(pKF->mnId==0);
         optimizer.addVertex(vSE3);
+        // SAFETY: remember it's active
+        activeKFIds.insert(pKF->mnId);
         if(pKF->mnId>maxKFid)
             maxKFid=pKF->mnId;
     }
@@ -106,20 +111,28 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         {
 
             KeyFrame* pKF = mit->first;
-            if(pKF->isBad() || pKF->mnId>maxKFid)
+            // SAFETY: require KF vertex to be present
+            if(!pKF || pKF->isBad() || pKF->mnId>maxKFid || activeKFIds.find(pKF->mnId)==activeKFIds.end())
+                continue;
+
+            // SAFETY: bounds check the keypoint index
+            if(mit->second >= pKF->mvKeysUn.size())
                 continue;
 
             nEdges++;
 
             const cv::KeyPoint &kpUn = pKF->mvKeysUn[mit->second];
 
-            if(pKF->mvuRight[mit->second]<0)
+            // SAFETY: ensure right index is accessible for test
+            if(mit->second >= pKF->mvuRight.size() || pKF->mvuRight[mit->second]<0)
             {
                 Eigen::Matrix<double,2,1> obs;
                 obs << kpUn.pt.x, kpUn.pt.y;
 
                 g2o::EdgeSE3ProjectXYZ* e = new g2o::EdgeSE3ProjectXYZ();
 
+                // SAFETY: verify vertices exist in optimizer
+                if(!optimizer.vertex(id) || !optimizer.vertex(pKF->mnId)) { delete e; continue; }
                 e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(id)));
                 e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(pKF->mnId)));
                 e->setMeasurement(obs);
@@ -148,6 +161,8 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
 
                 g2o::EdgeStereoSE3ProjectXYZ* e = new g2o::EdgeStereoSE3ProjectXYZ();
 
+                // SAFETY: verify vertex exists before attaching
+                if(!optimizer.vertex(id) || !optimizer.vertex(pKF->mnId)) { delete e; continue; }
                 e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(id)));
                 e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(pKF->mnId)));
                 e->setMeasurement(obs);
@@ -588,16 +603,20 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
 
             if(!pKFi->isBad())
             {                
+                if(!pKFi || pKFi->isBad()) continue;
+                if(mit->second >= pKFi->mvKeysUn.size()) continue;
                 const cv::KeyPoint &kpUn = pKFi->mvKeysUn[mit->second];
 
                 // Monocular observation
-                if(pKFi->mvuRight[mit->second]<0)
+                if(mit->second >= pKFi->mvuRight.size() || pKFi->mvuRight[mit->second]<0)
                 {
                     Eigen::Matrix<double,2,1> obs;
                     obs << kpUn.pt.x, kpUn.pt.y;
 
                     g2o::EdgeSE3ProjectXYZ* e = new g2o::EdgeSE3ProjectXYZ();
 
+                    // SAFETY: verify vertex exists before attaching
+                    if(!optimizer.vertex(id) || !optimizer.vertex(pKFi->mnId)) { delete e; continue; }
                     e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(id)));
                     e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(pKFi->mnId)));
                     e->setMeasurement(obs);
@@ -626,7 +645,9 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
 
                     g2o::EdgeStereoSE3ProjectXYZ* e = new g2o::EdgeStereoSE3ProjectXYZ();
 
-                    e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(id)));
+                    // SAFETY: verify vertex exists before attaching
+                if(!optimizer.vertex(id) || !optimizer.vertex(pKFi->mnId)) { delete e; continue; }
+                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(id)));
                     e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(pKFi->mnId)));
                     e->setMeasurement(obs);
                     const float &invSigma2 = pKFi->mvInvLevelSigma2[kpUn.octave];
