@@ -27,7 +27,9 @@ RUN apt-get update && \
     pkg-config \
     cmake \
     htop \
-    gedit
+    gedit \
+    g++-10 gcc-10 \
+    libtsan0
 
 # ------------------------------------------------------------------------------------------
 # [1] Use system OpenCV (4.2) and Python 3.8 (default in Ubuntu 20.04)
@@ -110,16 +112,16 @@ RUN apt-get update && apt-get install -y \
 
 # debug: install valgrind from source
 
-RUN echo "[Dockerfile Info] Installing valgrind from source ......"
-RUN apt-get update && \
-    apt-get install -y build-essential wget libc6-dbg && \
-    cd /root && \
-    wget https://sourceware.org/pub/valgrind/valgrind-3.21.0.tar.bz2 && \
-    tar -xjf valgrind-3.21.0.tar.bz2 && \
-    cd valgrind-3.21.0 && \
-    ./configure && \
-    make -j$(nproc) && \
-    make install
+# RUN echo "[Dockerfile Info] Installing valgrind from source ......"
+# RUN apt-get update && \
+#     apt-get install -y build-essential wget libc6-dbg && \
+#     cd /root && \
+#     wget https://sourceware.org/pub/valgrind/valgrind-3.21.0.tar.bz2 && \
+#     tar -xjf valgrind-3.21.0.tar.bz2 && \
+#     cd valgrind-3.21.0 && \
+#     ./configure && \
+#     make -j$(nproc) && \
+#     make install
 
 # -----------------------------------
 # Runtime image: adds source & builds
@@ -137,7 +139,7 @@ RUN cd /root/orbslam3/SLAM_CARV && \
     ./build.sh && \
     chmod +x /root/orbslam3/SLAM_CARV/run.sh /root/orbslam3/SLAM_CARV/valrun.sh
 
-ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
+ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib:$LD_LIBRARY_PATH
 
 RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh /root/orbslam3/SLAM_CARV/mp4_video.sh /root/orbslam3/SLAM_CARV/tum_video.sh
 
