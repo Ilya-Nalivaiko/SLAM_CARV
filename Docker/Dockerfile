@@ -30,7 +30,10 @@ RUN apt-get update && \
     gedit \
     gcc-10 g++-10 \
     libstdc++-10-dev \
-    libtsan0
+    libtsan0 \
+    clang \
+    lldb \
+    lld
 
 # Make gcc-10/g++-10 the defaults
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \

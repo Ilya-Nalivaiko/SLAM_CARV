@@ -9,11 +9,22 @@ ENDIF()
 
 MESSAGE("Build type: " ${ROS_BUILD_TYPE})
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3 -std=c++17")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__STDC_CONSTANT_MACROS -DGL_GLEXT_PROTOTYPES -D_LINUX -D_REENTRANT -DCGAL_USE_F2C -DCGAL_DISABLE_ROUNDING_MATH_CHECK")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_CONSTANT_MACROS -DGL_GLEXT_PROTOTYPES -D_LINUX -D_REENTRANT -DCGAL_USE_F2C -DCGAL_DISABLE_ROUNDING_MATH_CHECK")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-undefined")
+# ------------------------------
+# Force ThreadSanitizer build
+# ------------------------------
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -Wall -O1 -g -fsanitize=thread -fno-omit-frame-pointer -fPIC -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O1 -g -std=c++17 -fsanitize=thread -fno-omit-frame-pointer -fPIC -fPIE -pthread")
+
+# Linker flags: executables PIE, libs normal
+set(CMAKE_EXE_LINKER_FLAGS   "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread -pie -pthread -Wl,--no-undefined")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=thread -pthread")
+
+# Helpful messages for clarity
+message(STATUS "ThreadSanitizer instrumentation ENABLED")
+message(STATUS "  C flags   : ${CMAKE_C_FLAGS}")
+message(STATUS "  CXX flags : ${CMAKE_CXX_FLAGS}")
+message(STATUS "  EXE link  : ${CMAKE_EXE_LINKER_FLAGS}")
+message(STATUS "  SO link   : ${CMAKE_SHARED_LINKER_FLAGS}")
 
 # ===========================
 # Force C++17
