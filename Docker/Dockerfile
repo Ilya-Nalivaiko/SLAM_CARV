@@ -33,7 +33,9 @@ RUN apt-get update && \
     libtsan0 \
     clang \
     lldb \
-    lld
+    lld \
+    llvm-18 \
+    gdb strace
 
 # Make gcc-10/g++-10 the defaults
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \
@@ -149,7 +151,7 @@ RUN cd /root/orbslam3/SLAM_CARV && \
 	rm -rf build && \
     chmod +x build.sh && \
     ./build.sh && \
-    chmod +x /root/orbslam3/SLAM_CARV/run.sh /root/orbslam3/SLAM_CARV/valrun.sh
+    chmod +x /root/orbslam3/SLAM_CARV/run.sh /root/orbslam3/SLAM_CARV/valrun.sh /root/orbslam3/SLAM_CARV/collect_debug.sh
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib:$LD_LIBRARY_PATH
 

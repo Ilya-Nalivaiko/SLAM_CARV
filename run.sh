@@ -4,8 +4,9 @@
 
 set -euo pipefail
 
-# Keep TSan noise manageable and ignore uninstrumented system modules.
-export TSAN_OPTIONS="${TSAN_OPTIONS:-ignore_noninstrumented_modules=1:verbosity=0}"
+# Good stacks + deadlock detector + keep noise manageable
+export ASAN_SYMBOLIZER_PATH="${ASAN_SYMBOLIZER_PATH:-$(command -v llvm-symbolizer || true)}"
+export TSAN_OPTIONS="${TSAN_OPTIONS:-detect_deadlocks=1:halt_on_error=1:history_size=7:verbosity=1:log_path=stderr:ignore_noninstrumented_modules=1}"
 
 # Avoid proprietary/OpenGL driver VA reservations clashing with TSan shadow.
 export LIBGL_ALWAYS_SOFTWARE=1
