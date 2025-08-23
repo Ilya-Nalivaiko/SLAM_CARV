@@ -28,8 +28,17 @@ RUN apt-get update && \
     cmake \
     htop \
     gedit \
-    g++-10 gcc-10 \
+    gcc-10 g++-10 \
+    libstdc++-10-dev \
     libtsan0
+
+# Make gcc-10/g++-10 the defaults
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
+
+# Ensure builds default to GCC 10 unless explicitly overridden
+ENV CC=/usr/bin/gcc-10
+ENV CXX=/usr/bin/g++-10
 
 # ------------------------------------------------------------------------------------------
 # [1] Use system OpenCV (4.2) and Python 3.8 (default in Ubuntu 20.04)

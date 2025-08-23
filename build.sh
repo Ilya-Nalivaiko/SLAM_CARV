@@ -13,6 +13,11 @@ g++ --version
 # Pangolin & OpenCV runtime safety
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
+# Runtime search paths for the chosen toolchain (helps avoid libtsan from gcc-9)
+GCC_TSAN_DIR="$(dirname "$(gcc-10 -print-file-name=libtsan.so)")"
+GCC_STDCXX_DIR="$(dirname "$(g++-10 -print-file-name=libstdc++.so.6)")"
+export EXTRA_RPATH="-Wl,-rpath,${GCC_TSAN_DIR} -Wl,-rpath,${GCC_STDCXX_DIR}"
+
 # ================================
 # Build Thirdparty/DBoW2
 # ================================
@@ -73,8 +78,8 @@ cmake .. \
   -DCMAKE_CXX_COMPILER=/usr/bin/g++-10 \
   -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_CXX_FLAGS="-fsanitize=thread -fno-omit-frame-pointer -g -pthread" \
-  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread -pthread" \
-  -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=thread -pthread"
+  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread -pthread $EXTRA_RPATH" \
+  -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=thread -pthread $EXTRA_RPATH"
 
 CMAKE_EXIT_CODE=${PIPESTATUS[0]}
 if [ $CMAKE_EXIT_CODE -ne 0 ]; then
