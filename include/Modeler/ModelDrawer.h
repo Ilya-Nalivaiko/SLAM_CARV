@@ -5,10 +5,9 @@
 #ifndef __MODELDRAWER_H
 #define __MODELDRAWER_H
 
-#include<pangolin/pangolin.h>
-
-#include<mutex>
-
+#include <pangolin/pangolin.h>
+#include <mutex>
+#include <shared_mutex>
 #include <map>
 #include <list>
 #include <deque>
@@ -36,30 +35,36 @@ namespace ORB_SLAM2
         void DrawFrame(bool bRGB);
         cv::Mat DrawLines();
 
+        // Returns true if a new model was just committed to mModel
         bool UpdateModel();
-        void SetUpdatedModel(const vector<dlovi::Matrix> & modelPoints, const list<dlovi::Matrix> & modelTris);
 
+        // Called by the Modeler thread to stage a new model and then mark it done
+        void SetUpdatedModel(const std::vector<dlovi::Matrix> & modelPoints,
+                             const std::list<dlovi::Matrix> & modelTris);
         void MarkUpdateDone();
+
+        // Polled by the Modeler thread
         bool UpdateRequested();
         bool UpdateDone();
 
-        vector<dlovi::Matrix> & GetPoints();
-        list<dlovi::Matrix> & GetTris();
+        // NOTE: these return references; callers must hold mMutexModel (shared) while accessing
+        std::vector<dlovi::Matrix> & GetPoints();
+        std::list<dlovi::Matrix> & GetTris();
 
         void SetModeler(Modeler* pModeler);
         Modeler* mpModeler;
 
     private:
+        // Protects mbModelUpdateRequested / mbModelUpdateDone and mModel/mUpdatedModel
+        mutable std::shared_timed_mutex mMutexModel;
 
         bool mbModelUpdateRequested;
         bool mbModelUpdateDone;
 
-        std::pair<vector<dlovi::Matrix>, list<dlovi::Matrix>> mModel;
-        std::pair<vector<dlovi::Matrix>, list<dlovi::Matrix>> mUpdatedModel;
-
+        std::pair<std::vector<dlovi::Matrix>, std::list<dlovi::Matrix>> mModel;
+        std::pair<std::vector<dlovi::Matrix>, std::list<dlovi::Matrix>> mUpdatedModel;
     };
 
-} //namespace ORB_SLAM
+} //namespace ORB_SLAM2
 
 #endif //__MODELDRAWER_H
-

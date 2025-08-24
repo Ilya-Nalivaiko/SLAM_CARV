@@ -231,8 +231,8 @@ namespace ORB_SLAM2
 //                cv::imshow("Detected Lines",im);
 //            }
 
-            cv::Mat im = mpFrameDrawer->DrawFrame();
-            cv::resize(im, im, cv::Size(), 0.5, 0.5);
+            cv::Mat im_orig = mpFrameDrawer->DrawFrame(), im;
+            cv::resize(im_orig, im, cv::Size(), 0.5, 0.5);
             cv::imshow("ORB-SLAM2: Current Frame",im);
             cv::waitKey(mT);
 

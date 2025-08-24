@@ -38,92 +38,107 @@ FrameDrawer::FrameDrawer(Map* pMap):mpMap(pMap)
 
 cv::Mat FrameDrawer::DrawFrame()
 {
-    cv::Mat im;
-    vector<cv::KeyPoint> vIniKeys; // Initialization: KeyPoints in reference frame
-    vector<int> vMatches; // Initialization: correspondeces with reference keypoints
-    vector<cv::KeyPoint> vCurrentKeys; // KeyPoints in current frame
-    vector<bool> vbVO, vbMap; // Tracked MapPoints in current frame
-    int state; // Tracking state
+    cv::Mat imBGR;                         // final image we draw on (BGR)
+    std::vector<cv::KeyPoint> vIniKeys;    // Initialization: ref frame keypoints
+    std::vector<int> vMatches;             // Initialization matches
+    std::vector<cv::KeyPoint> vCurrentKeys;
+    std::vector<bool> vbVO, vbMap;
+    int state;
 
-    //Copy variables within scoped mutex
+    // Snapshot all state with a single lock. Convert to BGR directly to avoid an
+    // extra deep copy; this keeps the lock held for the conversion only.
     {
-        unique_lock<mutex> lock(mMutex);
-        state=mState;
-        if(mState==Tracking::SYSTEM_NOT_READY)
-            mState=Tracking::NO_IMAGES_YET;
+        std::unique_lock<std::mutex> lock(mMutex);
+        state = mState;
+        if (mState == Tracking::SYSTEM_NOT_READY)
+            mState = Tracking::NO_IMAGES_YET;
 
-        mIm.copyTo(im);
+        if (mIm.channels() == 1)
+            cv::cvtColor(mIm, imBGR, cv::COLOR_GRAY2BGR);  // one conversion, no prior copy
+        else
+            mIm.copyTo(imBGR);                             // already BGR
 
-        if(mState==Tracking::NOT_INITIALIZED)
+        if (mState == Tracking::NOT_INITIALIZED)
         {
             vCurrentKeys = mvCurrentKeys;
-            vIniKeys = mvIniKeys;
-            vMatches = mvIniMatches;
+            vIniKeys     = mvIniKeys;
+            vMatches     = mvIniMatches;
         }
-        else if(mState==Tracking::OK)
+        else if (mState == Tracking::OK)
         {
             vCurrentKeys = mvCurrentKeys;
-            vbVO = mvbVO;
-            vbMap = mvbMap;
+            vbVO         = mvbVO;
+            vbMap        = mvbMap;
         }
-        else if(mState==Tracking::LOST)
+        else if (mState == Tracking::LOST)
         {
             vCurrentKeys = mvCurrentKeys;
         }
-    } // destroy scoped mutex -> release mutex
+    } // unlock asap — everything below is read-only on our private imBGR
 
-    if(im.channels()<3) //this should be always true
-        cvtColor(im,im,cv::COLOR_GRAY2BGR);
-
-    //Draw
-    if(state==Tracking::NOT_INITIALIZED) //INITIALIZING
+    // Draw features
+    if (state == Tracking::NOT_INITIALIZED)
     {
-        for(unsigned int i=0; i<vMatches.size(); i++)
+        for (size_t i = 0; i < vMatches.size(); ++i)
         {
-            if(vMatches[i]>=0)
+            if (vMatches[i] >= 0)
             {
-                cv::line(im,vIniKeys[i].pt,vCurrentKeys[vMatches[i]].pt,
-                        cv::Scalar(0,255,0));
+                cv::line(imBGR, vIniKeys[i].pt, vCurrentKeys[vMatches[i]].pt, cv::Scalar(0,255,0));
             }
-        }        
+        }
     }
-    else if(state==Tracking::OK) //TRACKING
+    else if (state == Tracking::OK)
     {
-        mnTracked=0;
-        mnTrackedVO=0;
-        const float r = 5;
-        const int n = vCurrentKeys.size();
-        for(int i=0;i<n;i++)
+        mnTracked   = 0;
+        mnTrackedVO = 0;
+        const float r = 5.f;
+        const int n = static_cast<int>(vCurrentKeys.size());
+        for (int i = 0; i < n; ++i)
         {
-            if(vbVO[i] || vbMap[i])
+            if (vbVO[i] || vbMap[i])
             {
-                cv::Point2f pt1,pt2;
-                pt1.x=vCurrentKeys[i].pt.x-r;
-                pt1.y=vCurrentKeys[i].pt.y-r;
-                pt2.x=vCurrentKeys[i].pt.x+r;
-                pt2.y=vCurrentKeys[i].pt.y+r;
+                cv::Point2f pt1(vCurrentKeys[i].pt.x - r, vCurrentKeys[i].pt.y - r);
+                cv::Point2f pt2(vCurrentKeys[i].pt.x + r, vCurrentKeys[i].pt.y + r);
 
-                // This is a match to a MapPoint in the map
-                if(vbMap[i])
-                {
-                    cv::rectangle(im,pt1,pt2,cv::Scalar(0,255,0));
-                    cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(0,255,0),-1);
-                    mnTracked++;
-                }
-                else // This is match to a "visual odometry" MapPoint created in the last frame
-                {
-                    cv::rectangle(im,pt1,pt2,cv::Scalar(255,0,0));
-                    cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(255,0,0),-1);
-                    mnTrackedVO++;
+                if (vbMap[i]) {
+                    cv::rectangle(imBGR, pt1, pt2, cv::Scalar(0,255,0));
+                    cv::circle(imBGR, vCurrentKeys[i].pt, 2, cv::Scalar(0,255,0), -1);
+                    ++mnTracked;
+                } else {
+                    cv::rectangle(imBGR, pt1, pt2, cv::Scalar(255,0,0));
+                    cv::circle(imBGR, vCurrentKeys[i].pt, 2, cv::Scalar(255,0,0), -1);
+                    ++mnTrackedVO;
                 }
             }
         }
     }
 
-    cv::Mat imWithInfo;
-    DrawTextInfo(im,state, imWithInfo);
+    // Draw status text IN-PLACE on a small bottom bar (no second full-frame copy)
+    std::stringstream ss;
+    if (state == Tracking::NO_IMAGES_YET)         ss << " WAITING FOR IMAGES";
+    else if (state == Tracking::NOT_INITIALIZED)  ss << " TRYING TO INITIALIZE ";
+    else if (state == Tracking::OK) {
+        if (!mbOnlyTracking) ss << "SLAM MODE |  ";
+        else                 ss << "LOCALIZATION | ";
+        const int nKFs = mpMap->KeyFramesInMap();
+        const int nMPs = mpMap->MapPointsInMap();
+        ss << "KFs: " << nKFs << ", MPs: " << nMPs << ", Matches: " << mnTracked;
+        if (mnTrackedVO > 0) ss << ", + VO matches: " << mnTrackedVO;
+    }
+    else if (state == Tracking::LOST)             ss << " TRACK LOST. TRYING TO RELOCALIZE ";
+    else if (state == Tracking::SYSTEM_NOT_READY) ss << " LOADING ORB VOCABULARY. PLEASE WAIT...";
 
-    return imWithInfo;
+    int baseline = 0;
+    const cv::Size textSize = cv::getTextSize(ss.str(), cv::FONT_HERSHEY_PLAIN, 1, 1, &baseline);
+    const int barH = textSize.height + 10;
+    const int y0   = std::max(0, imBGR.rows - barH);
+
+    cv::rectangle(imBGR, cv::Rect(0, y0, imBGR.cols, barH), cv::Scalar(0,0,0), cv::FILLED);
+    cv::putText(imBGR, ss.str(), cv::Point(5, imBGR.rows - 5),
+                cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255,255,255), 1, 8);
+
+    // NRVO/move returns our single buffer; no extra full-frame copies
+    return imBGR;
 }
 
 
@@ -168,7 +183,7 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
 void FrameDrawer::Update(Tracking *pTracker)
 {
     unique_lock<mutex> lock(mMutex);
-    pTracker->mImGray.copyTo(mIm);
+    mIm = pTracker->mImGray.clone();
     mvCurrentKeys=pTracker->mCurrentFrame.mvKeys;
     N = mvCurrentKeys.size();
     mvbVO = vector<bool>(N,false);

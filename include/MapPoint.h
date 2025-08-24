@@ -27,6 +27,7 @@
 
 #include<opencv2/core/core.hpp>
 #include<mutex>
+#include<shared_mutex>
 
 namespace ORB_SLAM2
 {
@@ -111,7 +112,7 @@ public:
 
 
     static std::mutex mGlobalMutex;
-    std::mutex mMutexFeatures;
+    std::shared_mutex mMutexFeatures;
 
 protected:    
 

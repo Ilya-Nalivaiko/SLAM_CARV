@@ -34,6 +34,7 @@
 #include "Converter.h"
 
 #include<mutex>
+#include <shared_mutex>
 
 namespace ORB_SLAM2
 {
@@ -106,7 +107,6 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         // SAFETY: snapshot observations while features are stable
         map<KeyFrame*,size_t> observations;
         {
-            std::unique_lock<std::mutex> lk(pMP->mMutexFeatures);
             observations = pMP->GetObservations();
         }
 
@@ -630,7 +630,6 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
         // SAFETY: snapshot observations while features are stable
         map<KeyFrame*,size_t> observations;
         {
-            std::unique_lock<std::mutex> lk(pMP->mMutexFeatures);
             observations = pMP->GetObservations();
         }
 

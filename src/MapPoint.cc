@@ -96,13 +96,13 @@ cv::Mat MapPoint::GetNormal()
 
 KeyFrame* MapPoint::GetReferenceKeyFrame()
 {
-    unique_lock<mutex> lock(mMutexFeatures);
+    shared_lock<shared_mutex> lock(mMutexFeatures);
     return mpRefKF;
 }
 
 void MapPoint::AddObservation(KeyFrame* pKF, size_t idx)
 {
-    unique_lock<mutex> lock(mMutexFeatures);
+    unique_lock<std::shared_mutex>(mMutexFeatures);
     if(mObservations.count(pKF))
         return;
     mObservations[pKF]=idx;
@@ -117,7 +117,7 @@ void MapPoint::EraseObservation(KeyFrame* pKF)
 {
     bool bBad=false;
     {
-        unique_lock<mutex> lock(mMutexFeatures);
+        unique_lock<std::shared_mutex>(mMutexFeatures);
         if(mObservations.count(pKF))
         {
             int idx = mObservations[pKF];
@@ -146,13 +146,13 @@ void MapPoint::EraseObservation(KeyFrame* pKF)
 
 map<KeyFrame*, size_t> MapPoint::GetObservations()
 {
-    unique_lock<mutex> lock(mMutexFeatures);
+    shared_lock<shared_mutex> lock(mMutexFeatures);
     return mObservations;
 }
 
 int MapPoint::Observations()
 {
-    unique_lock<mutex> lock(mMutexFeatures);
+    shared_lock<shared_mutex> lock(mMutexFeatures);
     return nObs;
 }
 
@@ -160,7 +160,7 @@ void MapPoint::SetBadFlag()
 {
     map<KeyFrame*,size_t> obs;
     {
-        unique_lock<mutex> lock1(mMutexFeatures);
+        shared_lock<shared_mutex> lock1(mMutexFeatures);
         unique_lock<mutex> lock2(mMutexPos);
         mbBad=true;
         obs = mObservations;
@@ -178,7 +178,7 @@ void MapPoint::SetBadFlag()
 
 MapPoint* MapPoint::GetReplaced()
 {
-    unique_lock<mutex> lock1(mMutexFeatures);
+    unique_lock<std::shared_mutex>(mMutexFeatures);
     unique_lock<mutex> lock2(mMutexPos);
     return mpReplaced;
 }
@@ -191,7 +191,7 @@ void MapPoint::Replace(MapPoint* pMP)
     int nvisible, nfound;
     map<KeyFrame*,size_t> obs;
     {
-        unique_lock<mutex> lock1(mMutexFeatures);
+        shared_lock<shared_mutex> lock1(mMutexFeatures);
         unique_lock<mutex> lock2(mMutexPos);
         obs=mObservations;
         mObservations.clear();
@@ -225,26 +225,25 @@ void MapPoint::Replace(MapPoint* pMP)
 
 bool MapPoint::isBad()
 {
-    unique_lock<mutex> lock(mMutexFeatures);
-    unique_lock<mutex> lock2(mMutexPos);
+    shared_lock<shared_mutex> lock(mMutexFeatures);
     return mbBad;
 }
 
 void MapPoint::IncreaseVisible(int n)
 {
-    unique_lock<mutex> lock(mMutexFeatures);
+    unique_lock<shared_mutex> lock(mMutexFeatures);
     mnVisible+=n;
 }
 
 void MapPoint::IncreaseFound(int n)
 {
-    unique_lock<mutex> lock(mMutexFeatures);
+    unique_lock<shared_mutex> lock(mMutexFeatures);
     mnFound+=n;
 }
 
 float MapPoint::GetFoundRatio()
 {
-    unique_lock<mutex> lock(mMutexFeatures);
+    shared_lock<shared_mutex> lock(mMutexFeatures);
     return static_cast<float>(mnFound)/mnVisible;
 }
 
@@ -256,7 +255,7 @@ void MapPoint::ComputeDistinctiveDescriptors()
     map<KeyFrame*,size_t> observations;
 
     {
-        unique_lock<mutex> lock1(mMutexFeatures);
+        shared_lock<shared_mutex> lock1(mMutexFeatures);
         if(mbBad)
             return;
         observations=mObservations;
@@ -310,20 +309,20 @@ void MapPoint::ComputeDistinctiveDescriptors()
     }
 
     {
-        unique_lock<mutex> lock(mMutexFeatures);
+        unique_lock<shared_mutex> lock(mMutexFeatures);
         mDescriptor = vDescriptors[BestIdx].clone();
     }
 }
 
 cv::Mat MapPoint::GetDescriptor()
 {
-    unique_lock<mutex> lock(mMutexFeatures);
+    shared_lock<std::shared_mutex> lock(mMutexFeatures);
     return mDescriptor.clone();
 }
 
 int MapPoint::GetIndexInKeyFrame(KeyFrame *pKF)
 {
-    unique_lock<mutex> lock(mMutexFeatures);
+    shared_lock<std::shared_mutex> lock(mMutexFeatures);
     if(mObservations.count(pKF))
         return mObservations[pKF];
     else
@@ -332,7 +331,7 @@ int MapPoint::GetIndexInKeyFrame(KeyFrame *pKF)
 
 bool MapPoint::IsInKeyFrame(KeyFrame *pKF)
 {
-    unique_lock<mutex> lock(mMutexFeatures);
+    shared_lock<std::shared_mutex> lock(mMutexFeatures);
     return (mObservations.count(pKF));
 }
 
@@ -342,7 +341,7 @@ void MapPoint::UpdateNormalAndDepth()
     KeyFrame* pRefKF;
     cv::Mat Pos;
     {
-        unique_lock<mutex> lock1(mMutexFeatures);
+        shared_lock<std::shared_mutex>(mMutexFeatures);
         unique_lock<mutex> lock2(mMutexPos);
         if(mbBad)
             return;
