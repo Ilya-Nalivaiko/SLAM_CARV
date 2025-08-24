@@ -1,11 +1,11 @@
 #!/bin/bash
 
-docker run -d\
+docker run \
   -p 5901:5901 \
   -p 8080:8080 \
   --tmpfs /tmp:rw,size=100m \
   --tmpfs /root/.vnc \
-  --rm\
+  --rm -it \
   --privileged \
   -e DISPLAY=:1 \
   -e QT_X11_NO_MITSHM=1 \
