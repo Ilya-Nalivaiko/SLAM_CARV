@@ -77,7 +77,7 @@ namespace ORB_SLAM2 {
 
         long unsigned int GetMaxKFid();
 
-        //KeyFrame * GetNewestKeyFrame();
+        KeyFrame * GetNewestKeyFrame();
 
         void clear();
 
@@ -94,6 +94,8 @@ namespace ORB_SLAM2 {
             mpModeler = pModeler;
         }
         KeyFrame * newestKeyFrame;
+
+        std::mutex mMutexMap;
     protected:
 
 
@@ -107,7 +109,6 @@ namespace ORB_SLAM2 {
         // Index related to a big change in the map (loop closure, global BA)
         int mnBigChangeIdx;
 
-        std::mutex mMutexMap;
     };
 
 } //namespace ORB_SLAM

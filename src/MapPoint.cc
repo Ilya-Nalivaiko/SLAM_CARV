@@ -102,8 +102,8 @@ KeyFrame* MapPoint::GetReferenceKeyFrame()
 
 void MapPoint::AddObservation(KeyFrame* pKF, size_t idx)
 {
-    unique_lock<std::shared_mutex>(mMutexFeatures);
-    if(mObservations.count(pKF))
+    std::unique_lock<std::shared_mutex> lock(mMutexFeatures);
+    if (mObservations.count(pKF))
         return;
     mObservations[pKF]=idx;
 
@@ -117,10 +117,10 @@ void MapPoint::EraseObservation(KeyFrame* pKF)
 {
     bool bBad=false;
     {
-        unique_lock<std::shared_mutex>(mMutexFeatures);
-        if(mObservations.count(pKF))
+        std::unique_lock<std::shared_mutex> lock(mMutexFeatures);
+        if (mObservations.count(pKF))
         {
-            int idx = mObservations[pKF];
+            const int idx = mObservations[pKF];
             if(pKF->mvuRight[idx]>=0)
                 nObs-=2;
             else
@@ -131,8 +131,8 @@ void MapPoint::EraseObservation(KeyFrame* pKF)
             // carv: delete observation from modeler
             mpMap->mpModeler->AddDeleteObservationEntry(pKF, this);
 
-            if(mpRefKF==pKF)
-                mpRefKF=mObservations.begin()->first;
+            if (mpRefKF == pKF)
+                mpRefKF = mObservations.empty() ? nullptr : mObservations.begin()->first;
 
             // If only 2 observations or less, discard point
             if(nObs<=2)
@@ -158,19 +158,19 @@ int MapPoint::Observations()
 
 void MapPoint::SetBadFlag()
 {
-    map<KeyFrame*,size_t> obs;
+    std::map<KeyFrame*, size_t> obs;
     {
-        shared_lock<shared_mutex> lock1(mMutexFeatures);
-        unique_lock<mutex> lock2(mMutexPos);
-        mbBad=true;
-        obs = mObservations;
-        if(!mObservations.empty())
-            mObservations.clear();
+        std::unique_lock<std::shared_mutex> lock1(mMutexFeatures); // WRITE lock
+        std::unique_lock<std::mutex>        lock2(mMutexPos);
+
+        mbBad = true;
+        obs.swap(mObservations); // move out so we can release locks early
     }
-    for(map<KeyFrame*,size_t>::iterator mit=obs.begin(), mend=obs.end(); mit!=mend; mit++)
+
+    for (auto &kv : obs)
     {
-        KeyFrame* pKF = mit->first;
-        pKF->EraseMapPointMatch(mit->second);
+        KeyFrame* pKF = kv.first;
+        pKF->EraseMapPointMatch(kv.second);
     }
 
     mpMap->DeferErase(this); // SAFETY: deferred delete
@@ -178,8 +178,8 @@ void MapPoint::SetBadFlag()
 
 MapPoint* MapPoint::GetReplaced()
 {
-    unique_lock<std::shared_mutex>(mMutexFeatures);
-    unique_lock<mutex> lock2(mMutexPos);
+    std::shared_lock<std::shared_mutex> lock1(mMutexFeatures);
+    std::unique_lock<std::mutex>        lock2(mMutexPos);
     return mpReplaced;
 }
 
@@ -189,38 +189,39 @@ void MapPoint::Replace(MapPoint* pMP)
         return;
 
     int nvisible, nfound;
-    map<KeyFrame*,size_t> obs;
+    std::map<KeyFrame*, size_t> obs;
+
     {
-        shared_lock<shared_mutex> lock1(mMutexFeatures);
-        unique_lock<mutex> lock2(mMutexPos);
-        obs=mObservations;
+        std::unique_lock<std::shared_mutex> lock1(mMutexFeatures); // WRITE lock
+        std::unique_lock<std::mutex>        lock2(mMutexPos);
+
+        obs        = mObservations;
         mObservations.clear();
-        mbBad=true;
-        nvisible = mnVisible;
-        nfound = mnFound;
+        mbBad      = true;
+        nvisible   = mnVisible;
+        nfound     = mnFound;
         mpReplaced = pMP;
     }
 
-    for(map<KeyFrame*,size_t>::iterator mit=obs.begin(), mend=obs.end(); mit!=mend; mit++)
+    for (auto it = obs.begin(); it != obs.end(); ++it)
     {
-        // Replace measurement in keyframe
-        KeyFrame* pKF = mit->first;
+        KeyFrame* pKF = it->first;
 
-        if(!pMP->IsInKeyFrame(pKF))
+        if (!pMP->IsInKeyFrame(pKF))
         {
-            pKF->ReplaceMapPointMatch(mit->second, pMP);
-            pMP->AddObservation(pKF,mit->second);
+            pKF->ReplaceMapPointMatch(it->second, pMP);
+            pMP->AddObservation(pKF, it->second);
         }
         else
         {
-            pKF->EraseMapPointMatch(mit->second);
+            pKF->EraseMapPointMatch(it->second);
         }
     }
     pMP->IncreaseFound(nfound);
     pMP->IncreaseVisible(nvisible);
     pMP->ComputeDistinctiveDescriptors();
 
-    mpMap->DeferErase(this); // SAFETY: deferred delete
+    mpMap->DeferErase(this); // deferred delete (safe)
 }
 
 bool MapPoint::isBad()
@@ -337,44 +338,47 @@ bool MapPoint::IsInKeyFrame(KeyFrame *pKF)
 
 void MapPoint::UpdateNormalAndDepth()
 {
-    map<KeyFrame*,size_t> observations;
-    KeyFrame* pRefKF;
-    cv::Mat Pos;
+    std::map<KeyFrame*, size_t> observations;
+    KeyFrame* pRefKF = nullptr;
+    cv::Mat   Pos;
+
     {
-        shared_lock<std::shared_mutex>(mMutexFeatures);
-        unique_lock<mutex> lock2(mMutexPos);
-        if(mbBad)
+        std::shared_lock<std::shared_mutex> lock1(mMutexFeatures);
+        std::unique_lock<std::mutex>        lock2(mMutexPos);
+        if (mbBad)
             return;
-        observations=mObservations;
-        pRefKF=mpRefKF;
-        Pos = mWorldPos.clone();
+        observations = mObservations;
+        pRefKF       = mpRefKF;
+        Pos          = mWorldPos.clone();
     }
 
-    if(observations.empty())
+    if (observations.empty())
         return;
 
-    cv::Mat normal = cv::Mat::zeros(3,1,CV_32F);
-    int n=0;
-    for(map<KeyFrame*,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
+    // Average viewing direction
+    cv::Mat normal = cv::Mat::zeros(3, 1, CV_32F);
+    int n = 0;
+    for (auto it = observations.begin(); it != observations.end(); ++it)
     {
-        KeyFrame* pKF = mit->first;
+        KeyFrame* pKF = it->first;
         cv::Mat Owi = pKF->GetCameraCenter();
-        cv::Mat normali = mWorldPos - Owi;
-        normal = normal + normali/cv::norm(normali);
-        n++;
+        cv::Mat normali = Pos - Owi;              // use local Pos, not mWorldPos
+        normal = normal + normali / cv::norm(normali);
+        ++n;
     }
 
+    // Depth invariance relative to reference KF
     cv::Mat PC = Pos - pRefKF->GetCameraCenter();
-    const float dist = cv::norm(PC);
-    const int level = pRefKF->mvKeysUn[observations[pRefKF]].octave;
-    const float levelScaleFactor =  pRefKF->mvScaleFactors[level];
-    const int nLevels = pRefKF->mnScaleLevels;
+    const float dist             = cv::norm(PC);
+    const int   level            = pRefKF->mvKeysUn[observations[pRefKF]].octave;
+    const float levelScaleFactor = pRefKF->mvScaleFactors[level];
+    const int   nLevels          = pRefKF->mnScaleLevels;
 
     {
-        unique_lock<mutex> lock3(mMutexPos);
-        mfMaxDistance = dist*levelScaleFactor;
-        mfMinDistance = mfMaxDistance/pRefKF->mvScaleFactors[nLevels-1];
-        mNormalVector = normal/n;
+        std::unique_lock<std::mutex> lock3(mMutexPos);
+        mfMaxDistance = dist * levelScaleFactor;
+        mfMinDistance = mfMaxDistance / pRefKF->mvScaleFactors[nLevels - 1];
+        mNormalVector = normal / n;
     }
 }
 

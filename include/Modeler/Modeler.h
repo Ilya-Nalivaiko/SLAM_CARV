@@ -3,6 +3,7 @@
 #define __MODELER_H
 
 #include <mutex>
+#include <atomic>
 
 #include "Modeler/SFMTranscriptInterface_ORBSLAM.h"
 #include "Modeler/SFMTranscriptInterface_Delaunay.h"
@@ -135,6 +136,9 @@ namespace ORB_SLAM2 {
         void saveLinePointToFile(std::vector<LinePoint>& vPOnLine, const std::string & strFileName);
         double computeNG(double N, double Khat);
 
+        // Thread-safe getter for new transcript commands
+        std::string GetNewCommand();
+
         void AddKeyFrameEntry(KeyFrame* pKF);
         void AddDeletePointEntry(MapPoint* pMP);
         void AddDeleteObservationEntry(KeyFrame* pKF, MapPoint* pMP);
@@ -185,7 +189,7 @@ namespace ORB_SLAM2 {
         //CARV runner instance
         dlovi::FreespaceDelaunayAlgorithm mObjAlgorithm;
         SFMTranscriptInterface_Delaunay mAlgInterface; // An encapsulation of the interface between the transcript and the surface inferring algorithm.
-        bool mbFirstKeyFrame;
+        std::atomic<bool> mbFirstKeyFrame;
 
         //queue for the keyframes used to texture the model, keyframe mnFrameId
         std::deque<TextureFrame> mdTextureQueue;

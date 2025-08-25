@@ -23,6 +23,7 @@
 #include<algorithm>
 #include<fstream>
 #include<chrono>
+#include<mutex>
 
 #include<ros/ros.h>
 #include <std_msgs/Header.h>
@@ -117,52 +118,46 @@ int main(int argc, char **argv)
 
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {
-    // Copy the ros image message to cv::Mat.
+    // Copy the ROS image to cv::Mat
     cv_bridge::CvImageConstPtr cv_ptr;
-    try
-    {
+    try {
         cv_ptr = cv_bridge::toCvShare(msg);
-    }
-    catch (cv_bridge::Exception& e)
-    {
+    } catch (cv_bridge::Exception& e) {
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
 
-    mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
-    ORB_SLAM2::KeyFrame* pKF = mpSLAM->mpMap->newestKeyFrame;;
-    if(pKF != NULL)
+    // Run tracking
+    mpSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec());
+
+    // --- FIX: read newestKeyFrame under the same mutex writers use ---
+    ORB_SLAM2::KeyFrame* pKF = nullptr;
     {
-      int nowMaxId=mpSLAM->mpMap->GetMaxKFid();
-      if(nowMaxId > max_kfId)
-      {
-        cv::Mat TWC = pKF->GetPoseInverse();//return TWC
+        std::unique_lock<std::mutex> lk(mpSLAM->mpMap->mMutexMap);
+        pKF = mpSLAM->mpMap->newestKeyFrame;
+    }
 
-        //cout<<"key frame mnId: "<<pKF->mnId<<endl;//int--------------------------------------debug
-        cout.precision(15);
-        //cout<<"key frame timestamp"<<std::fixed<<pKF->mTimeStamp<<endl;//double--------------------------------------debug
-        //cout<<"ros mono MyCurrent Key Frame. camera center: "<<endl<<pKF->GetCameraCenter()<<endl;//--------------------------------debug
+    if (pKF && pKF->mnId > max_kfId)
+    {
+        cv::Mat TWC = pKF->GetPoseInverse(); // thread-safe inside KeyFrame
 
-        std_msgs::String msg;
+        std_msgs::String msg;              // publish KF id, timestamp, pose
         std::stringstream ss;
-        ss<<pKF->mnId<<",";
-        ss<<std::setprecision(15)<<pKF->mTimeStamp<<",";
-        for(int ti=0;ti<TWC.rows;ti++)
-        {
-          for(int tj=0;tj<TWC.cols;tj++)
-          {
-            std::ostringstream ssss;
-            ssss << TWC.at<float>(ti,tj);
-            ss<<ssss.str()<<",";
-          }
-        }
+        ss << pKF->mnId << ",";
+        ss << std::setprecision(15) << pKF->mTimeStamp << ",";
+        for (int r = 0; r < TWC.rows; ++r)
+            for (int c = 0; c < TWC.cols; ++c)
+                ss << TWC.at<float>(r, c) << ",";
+
         msg.data = ss.str();
         pubTask.publish(msg);
-        max_kfId=nowMaxId;
-      }
+
+        max_kfId = pKF->mnId;              // update last-published id
     }
-    std_msgs::String msgScript;  //publish CARV model scripts
-    msgScript.data = mpSLAM->mpModeler->mTranscriptInterface.m_SFMTranscript.getNewCommand();
-    if(msgScript.data !="")
-      pubCARVScripts.publish(msgScript);
+
+    // Publish CARV transcript safely (Modeler provides its own lock)
+    std_msgs::String msgScript;
+    msgScript.data = mpSLAM->mpModeler->GetNewCommand();
+    if (!msgScript.data.empty())
+        pubCARVScripts.publish(msgScript);
 }

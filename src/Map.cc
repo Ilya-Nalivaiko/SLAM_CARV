@@ -43,11 +43,11 @@ void Map::AddKeyFrame(KeyFrame *pKF)
     //std::cout<<newestKeyFrame->GetPoseInverse()<<std::endl;
 }
 
-// KeyFrame * Map::GetNewestKeyFrame()
-// {
-//   //unique_lock<mutex> lock(mMutexMap);
-//   return newestKeyFrame;
-// }
+KeyFrame * Map::GetNewestKeyFrame()
+{
+  //unique_lock<mutex> lock(mMutexMap);
+  return newestKeyFrame;
+}
 
 void Map::AddMapPoint(MapPoint *pMP)
 {

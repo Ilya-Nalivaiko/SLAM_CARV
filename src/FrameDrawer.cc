@@ -44,19 +44,24 @@ cv::Mat FrameDrawer::DrawFrame()
     std::vector<cv::KeyPoint> vCurrentKeys;
     std::vector<bool> vbVO, vbMap;
     int state;
+    bool onlyTracking = false;             // <-- capture under lock
 
     // Snapshot all state with a single lock. Convert to BGR directly to avoid an
     // extra deep copy; this keeps the lock held for the conversion only.
     {
         std::unique_lock<std::mutex> lock(mMutex);
+
         state = mState;
         if (mState == Tracking::SYSTEM_NOT_READY)
             mState = Tracking::NO_IMAGES_YET;
 
+        // capture the flag while locked (fixes TSAN race)
+        onlyTracking = mbOnlyTracking;
+
         if (mIm.channels() == 1)
-            cv::cvtColor(mIm, imBGR, cv::COLOR_GRAY2BGR);  // one conversion, no prior copy
+            cv::cvtColor(mIm, imBGR, cv::COLOR_GRAY2BGR);
         else
-            mIm.copyTo(imBGR);                             // already BGR
+            mIm.copyTo(imBGR);
 
         if (mState == Tracking::NOT_INITIALIZED)
         {
@@ -74,7 +79,7 @@ cv::Mat FrameDrawer::DrawFrame()
         {
             vCurrentKeys = mvCurrentKeys;
         }
-    } // unlock asap — everything below is read-only on our private imBGR
+    } // unlock — everything below is on local copies
 
     // Draw features
     if (state == Tracking::NOT_INITIALIZED)
@@ -82,9 +87,7 @@ cv::Mat FrameDrawer::DrawFrame()
         for (size_t i = 0; i < vMatches.size(); ++i)
         {
             if (vMatches[i] >= 0)
-            {
                 cv::line(imBGR, vIniKeys[i].pt, vCurrentKeys[vMatches[i]].pt, cv::Scalar(0,255,0));
-            }
         }
     }
     else if (state == Tracking::OK)
@@ -113,13 +116,13 @@ cv::Mat FrameDrawer::DrawFrame()
         }
     }
 
-    // Draw status text IN-PLACE on a small bottom bar (no second full-frame copy)
+    // Status text bar
     std::stringstream ss;
     if (state == Tracking::NO_IMAGES_YET)         ss << " WAITING FOR IMAGES";
     else if (state == Tracking::NOT_INITIALIZED)  ss << " TRYING TO INITIALIZE ";
     else if (state == Tracking::OK) {
-        if (!mbOnlyTracking) ss << "SLAM MODE |  ";
-        else                 ss << "LOCALIZATION | ";
+        if (!onlyTracking) ss << "SLAM MODE |  ";
+        else               ss << "LOCALIZATION | ";
         const int nKFs = mpMap->KeyFramesInMap();
         const int nMPs = mpMap->MapPointsInMap();
         ss << "KFs: " << nKFs << ", MPs: " << nMPs << ", Matches: " << mnTracked;
@@ -137,7 +140,6 @@ cv::Mat FrameDrawer::DrawFrame()
     cv::putText(imBGR, ss.str(), cv::Point(5, imBGR.rows - 5),
                 cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255,255,255), 1, 8);
 
-    // NRVO/move returns our single buffer; no extra full-frame copies
     return imBGR;
 }
 

@@ -1322,32 +1322,23 @@ namespace ORB_SLAM2 {
         if(pKF->isBad())
             return;
 
-        // Avoid that a keyframe can be erased while it is being process by this thread
+        // Avoid that a keyframe can be erased while it is being processed
         pKF->SetNotErase();
 
-        if (mbFirstKeyFrame) {
-            unique_lock<mutex> lock(mMutexTranscript);
+        // Atomically test-and-clear the "first KF" flag to avoid races with reset
+        if (mbFirstKeyFrame.exchange(false))
+        {
+            std::unique_lock<std::mutex> lock(mMutexTranscript);
             mTranscriptInterface.addFirstKeyFrameInsertionEntry(pKF);
-            mbFirstKeyFrame = false;
-        } else {
-            unique_lock<mutex> lock(mMutexTranscript);
-
-//            auto t1 = std::chrono::high_resolution_clock::now();
-//            std::vector<cv::Point3f> vPOnLine = GetPointsOnLineSegments(pKF);
-//            auto t2 = std::chrono::high_resolution_clock::now();
-//            std::cout << "GetPointsOnLineSegments() took "
-//                      << std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()
-//                      << " milliseconds\n";
-//
-//            mTranscriptInterface.addKeyFrameInsertionWithLinesEntry(pKF,vPOnLine);
-
+        }
+        else
+        {
+            std::unique_lock<std::mutex> lock(mMutexTranscript);
             mTranscriptInterface.addKeyFrameInsertionEntry(pKF);
-
         }
 
         AddTexture(pKF);
-
-        //DetectLineSegmentsLater(pKF);
+        // DetectLineSegmentsLater(pKF);
 
         pKF->SetErase();
     }
@@ -1431,7 +1422,7 @@ namespace ORB_SLAM2 {
                 mvLines.clear();
             }
 
-            mbFirstKeyFrame = true;
+            mbFirstKeyFrame.store(true, std::memory_order_relaxed);
 
             mbResetRequested=false;
         }
@@ -1581,6 +1572,9 @@ namespace ORB_SLAM2 {
         return im;
     }
 
-
+    std::string Modeler::GetNewCommand() {
+        std::unique_lock<std::mutex> lock(mMutexTranscript);
+        return mTranscriptInterface.m_SFMTranscript.getNewCommand();
+    }
 
 }
