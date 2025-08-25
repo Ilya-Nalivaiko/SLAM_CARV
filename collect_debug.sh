@@ -7,8 +7,8 @@ set -euo pipefail
 
 PROC_NAME="Mono"
 PID=""
-DURATION=20            # seconds for time-limited strace
-LINE_LIMIT=0           # 0 = disabled; else limit strace lines
+DURATION=5            # seconds for time-limited strace
+LINE_LIMIT=30           # 0 = disabled; else limit strace lines
 OUTDIR_BASE="./tsan_dumps"
 
 # --- locate PID(s) ---
@@ -60,6 +60,8 @@ _dump_proc() {
     cat "$t/wchan"  > "$OUTDIR/proc.${pid}.task.${tid}.wchan"   2>/dev/null || true
     cat "$t/stat"   > "$OUTDIR/proc.${pid}.task.${tid}.stat"    2>/dev/null || true
   done
+  lsof -p "$pid" > "$OUTDIR/proc.${pid}.lsof.txt" 2>/dev/null || true
+  ps -Lp "$pid" -o pid,tid,pcpu,psr,stat,wchan:32,comm > "$OUTDIR/proc.${pid}.threads.ps" 2>&1 || true
 }
 
 # GDB snapshot (one-shot, all threads, full backtraces)
@@ -75,6 +77,21 @@ _gdb_dump() {
     -ex "set pagination off" \
     -ex "thread apply all bt full" \
     -ex "info threads" \
+    -ex "set print pretty on" \
+    -ex "set logging file $outf.mutexes" \
+    -ex "set logging on" \
+    -ex "python import gdb, re
+    frames = gdb.execute('thread apply all bt', to_string=True)
+    for line in frames.splitlines():
+        m = re.search(r'pthread_mutex_lock.*0x([0-9a-f]+)', line)
+        if m:
+            addr = m.group(1)
+            try:
+                gdb.execute('p *(pthread_mutex_t*)0x%s' % addr)
+            except:
+                pass
+    " \
+    -ex "set logging off" \
     -ex "quit" > "$outf" 2>&1 || true
 }
 
@@ -84,7 +101,7 @@ _strace_time() {
   # -ff splits by pid into multiple files, base name below
   local base="$OUTDIR/strace.${pid}"
   echo "[collect_debug] Running time-limited strace (${DURATION}s) for PID $pid -> ${base}.*"
-  timeout "${DURATION}"s strace -f -tt -T -yy -s 256 -ff -o "$base" -p "$pid" 2>/dev/null || true
+  timeout "${DURATION}"s strace -f -e trace=futex,epoll_wait,epoll_pwait,recvfrom,sendto,nanosleep -tt -T -yy -s 256 -ff -o "$base" -p "$pid" 2>/dev/null || true
 }
 
 _strace_lines() {
@@ -93,7 +110,7 @@ _strace_lines() {
   echo "[collect_debug] Running line-limited strace (first ${LINE_LIMIT} lines) for PID $pid -> $outf"
   # strace logs to stderr; capture and cut after N lines
   # stdbuf helps line-buffer the pipe
-  strace -f -tt -T -yy -s 256 -p "$pid" 2> >(stdbuf -oL -eL head -n "$LINE_LIMIT" > "$outf") 1>/dev/null || true
+  strace -f -e trace=futex,epoll_wait,epoll_pwait,recvfrom,sendto,nanosleep -tt -T -yy -s 256 -p "$pid" 2> >(stdbuf -oL -eL head -n "$LINE_LIMIT" > "$outf") 1>/dev/null || true
 }
 
 # System context

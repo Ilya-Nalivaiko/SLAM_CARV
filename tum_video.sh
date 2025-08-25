@@ -1,1 +1,1 @@
-roslaunch ros_cam_publishers tumcam.launch dataset_dir:=/root/orbslam3/SLAM_CARV/test_data/rgbd_dataset_freiburg1_desk time_scale:=1.0
+roslaunch ros_cam_publishers tumcam.launch dataset_dir:=/root/orbslam3/SLAM_CARV/test_data/rgbd_dataset_freiburg1_desk time_scale:=0.05

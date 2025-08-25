@@ -163,7 +163,7 @@ void MapPoint::SetBadFlag()
         std::unique_lock<std::shared_mutex> lock1(mMutexFeatures); // WRITE lock
         std::unique_lock<std::mutex>        lock2(mMutexPos);
 
-        mbBad.store(true, std::memory_order_relaxed);
+        mbBad.store(true, std::memory_order_release);
         obs.swap(mObservations); // move out so we can release locks early
     }
 
@@ -226,7 +226,7 @@ void MapPoint::Replace(MapPoint* pMP)
 
 bool MapPoint::isBad()
 {
-    return mbBad.load(std::memory_order_relaxed);
+    return mbBad.load(std::memory_order_acquire);
 }
 
 void MapPoint::IncreaseVisible(int n)

@@ -60,6 +60,7 @@ void LoopClosing::Run()
 
     while(1)
     {
+        if (CheckFinish()) break;
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames())
         {
@@ -89,6 +90,7 @@ void LoopClosing::Run()
 
 void LoopClosing::InsertKeyFrame(KeyFrame *pKF)
 {
+    if (CheckFinish()) return;
     unique_lock<mutex> lock(mMutexLoopQueue);
     if(pKF->mnId!=0)
         mlpLoopKeyFrameQueue.push_back(pKF);
@@ -102,6 +104,7 @@ bool LoopClosing::CheckNewKeyFrames()
 
 bool LoopClosing::DetectLoop()
 {
+    if (CheckFinish()) return false;
     {
         unique_lock<mutex> lock(mMutexLoopQueue);
         mpCurrentKF = mlpLoopKeyFrameQueue.front();
@@ -212,7 +215,7 @@ bool LoopClosing::DetectLoop()
 
 
     // Add Current Keyframe to database
-    mpKeyFrameDB->add(mpCurrentKF);
+    if(!CheckFinish()) mpKeyFrameDB->add(mpCurrentKF);
 
     if(mvpEnoughConsistentCandidates.empty())
     {
@@ -621,6 +624,7 @@ void LoopClosing::RequestReset()
 
     while(1)
     {
+        if (CheckFinish()) break;
         {
         unique_lock<mutex> lock2(mMutexReset);
         if(!mbResetRequested)

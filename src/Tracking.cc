@@ -306,15 +306,23 @@ namespace ORB_SLAM2
         mLastProcessedState=mState;
 
         // Get Map Mutex -> Map cannot be changed
-        unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
+        unique_lock<mutex> lock(mpMap->mMutexMapUpdate, std::defer_lock);
 
         if(mState==NOT_INITIALIZED)
         {
             if(mSensor==System::STEREO || mSensor==System::RGBD)
+            {
+                lock.lock();
                 StereoInitialization();
+                lock.unlock();
+            }
             else
+            {
+                lock.lock();
                 MonocularInitialization();
-
+                lock.unlock();
+            }
+ 
             mpFrameDrawer->Update(this);
 
             if(mState!=OK)
@@ -487,7 +495,11 @@ namespace ORB_SLAM2
 
                 // Check if we need to insert a new keyframe
                 if(NeedNewKeyFrame())
+                {
+                    lock.lock();
                     CreateNewKeyFrame();
+                    lock.unlock();
+                }
 
                 // We allow points with high innovation (considererd outliers by the Huber Function)
                 // pass to the new keyframe, so that bundle adjustment will finally decide
@@ -904,7 +916,12 @@ namespace ORB_SLAM2
         // Create "visual odometry" points if in Localization Mode
         UpdateLastFrame();
 
+        if (mVelocity.empty() || mLastFrame.mTcw.empty()){
+            std::cerr << "Tried to track with empty matrix" << std::endl;
+            return false;
+        }
         mCurrentFrame.SetPose(mVelocity*mLastFrame.mTcw);
+        if (mCurrentFrame.mTcw.empty()) return false;
 
         fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
 
