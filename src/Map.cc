@@ -105,10 +105,18 @@ vector<KeyFrame*> Map::GetAllKeyFrames()
 //
 // }
 
-vector<MapPoint*> Map::GetAllMapPoints()
+std::vector<MapPoint*> Map::GetAllMapPoints()
 {
-    unique_lock<mutex> lock(mMutexMap);
-    return vector<MapPoint*>(mspMapPoints.begin(),mspMapPoints.end());
+    std::unique_lock<std::mutex> lock(mMutexMap);
+    std::vector<MapPoint*> v;
+    v.reserve(mspMapPoints.size());
+    for (MapPoint* pMP : mspMapPoints)
+    {
+        // Only publish fully usable points while holding the map lock
+        if (pMP && !pMP->isBad())
+            v.push_back(pMP);
+    }
+    return v;
 }
 
 long unsigned int Map::MapPointsInMap()
@@ -137,10 +145,14 @@ long unsigned int Map::GetMaxKFid()
 
 void Map::clear()
 {
-    for(set<MapPoint*>::iterator sit=mspMapPoints.begin(), send=mspMapPoints.end(); sit!=send; sit++)
+    // Block tracker/mapper updates, then take the map container lock.
+    std::unique_lock<std::mutex> lkUpdate(mMutexMapUpdate);
+    std::unique_lock<std::mutex> lk(mMutexMap);
+
+    for (set<MapPoint*>::iterator sit = mspMapPoints.begin(), send = mspMapPoints.end(); sit != send; ++sit)
         delete *sit;
 
-    for(set<KeyFrame*>::iterator sit=mspKeyFrames.begin(), send=mspKeyFrames.end(); sit!=send; sit++)
+    for (set<KeyFrame*>::iterator sit = mspKeyFrames.begin(), send = mspKeyFrames.end(); sit != send; ++sit)
         delete *sit;
 
     mspMapPoints.clear();

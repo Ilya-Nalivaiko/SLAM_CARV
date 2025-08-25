@@ -163,7 +163,7 @@ void MapPoint::SetBadFlag()
         std::unique_lock<std::shared_mutex> lock1(mMutexFeatures); // WRITE lock
         std::unique_lock<std::mutex>        lock2(mMutexPos);
 
-        mbBad = true;
+        mbBad.store(true, std::memory_order_relaxed);
         obs.swap(mObservations); // move out so we can release locks early
     }
 
@@ -197,7 +197,7 @@ void MapPoint::Replace(MapPoint* pMP)
 
         obs        = mObservations;
         mObservations.clear();
-        mbBad      = true;
+        mbBad.store(true, std::memory_order_relaxed);
         nvisible   = mnVisible;
         nfound     = mnFound;
         mpReplaced = pMP;
@@ -226,8 +226,7 @@ void MapPoint::Replace(MapPoint* pMP)
 
 bool MapPoint::isBad()
 {
-    shared_lock<shared_mutex> lock(mMutexFeatures);
-    return mbBad;
+    return mbBad.load(std::memory_order_relaxed);
 }
 
 void MapPoint::IncreaseVisible(int n)
@@ -257,7 +256,7 @@ void MapPoint::ComputeDistinctiveDescriptors()
 
     {
         shared_lock<shared_mutex> lock1(mMutexFeatures);
-        if(mbBad)
+        if(mbBad.load(std::memory_order_relaxed))
             return;
         observations=mObservations;
     }
@@ -345,7 +344,7 @@ void MapPoint::UpdateNormalAndDepth()
     {
         std::shared_lock<std::shared_mutex> lock1(mMutexFeatures);
         std::unique_lock<std::mutex>        lock2(mMutexPos);
-        if (mbBad)
+        if (mbBad.load(std::memory_order_relaxed))
             return;
         observations = mObservations;
         pRefKF       = mpRefKF;

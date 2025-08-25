@@ -280,8 +280,12 @@ namespace dlovi {
 
     void FreespaceDelaunayAlgorithm::IterateTetrahedronMethod(Delaunay3 & dt, vector<Delaunay3::Vertex_handle> & vecVertexHandles, const int frameIndex) const {
         // If the bounding vertices doesn't exist, create it as the first 8 vertices in dt:
-        if (dt.number_of_vertices() == 0)
-            createBounds(dt);
+        // create them once (serialize with CGAL mutex)
+        if (dt.number_of_vertices() == 0) {
+            std::lock_guard<std::mutex> lk(g_tdsMutex);
+            if (dt.number_of_vertices() == 0)
+                createBounds(dt);
+        }
 
         // Add the newly observed points into the triangulation and the vertex handle list.
         // This involves, for each new point, properly deleting & staring off a connected subset of tetrahedra that violate the Delaunay constraint,
@@ -290,20 +294,16 @@ namespace dlovi {
         addNewlyObservedFeatures(dt, vecVertexHandles, localVisList, getVisibilityList(frameIndex));
 
         // Apply the current view's freespace constraints to the triangulation
-        Matrix matO = getCamCenter(frameIndex);
-        PointD3 O(matO(0), matO(1), matO(2));
-        for (int j = 0; j < (int)localVisList.size(); j++) {
-            // let Q be the point & O the optic center.
-            Delaunay3::Vertex_handle hndlQ = vecVertexHandles[localVisList[j]];
-
-            // TODO: DEBUG: PTAM has minor data corruption bugs, and this hack handles the bad data being passed to our code.  Should fix PTAM instead.
-            if (! dt.is_vertex(hndlQ))
-                continue;
-
-            Segment QO = Segment(hndlQ->point(), O);
-
-            // Increment the voting counts of all tetrahedra that intersect the constraint QO & keep track of which constraints crossed which tetrahedra.
-            markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, hndlQ, QO, frameIndex, localVisList[j]);
+        {
+            std::lock_guard<std::mutex> lk(g_tdsMutex);
+            Matrix matO = getCamCenter(frameIndex);
+            PointD3 O(matO(0), matO(1), matO(2));
+            for (int j = 0; j < (int)localVisList.size(); ++j) {
+                Delaunay3::Vertex_handle hndlQ = vecVertexHandles[localVisList[j]];
+                if (!dt.is_vertex(hndlQ)) continue;
+                Segment QO(hndlQ->point(), O);
+                markTetrahedraCrossingConstraintWithBookKeeping(dt, vecVertexHandles, hndlQ, QO, frameIndex, localVisList[j]);
+            }
         }
         // Done marking tetrahedra; return.
     }

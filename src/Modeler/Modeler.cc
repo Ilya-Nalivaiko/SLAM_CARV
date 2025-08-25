@@ -1319,6 +1319,7 @@ namespace ORB_SLAM2 {
     }
 
     void Modeler::AddKeyFrameEntry(KeyFrame* pKF){
+        if (!pKF) return;              // minimal safety: null guard
         if(pKF->isBad())
             return;
 

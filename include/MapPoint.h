@@ -27,6 +27,7 @@
 
 #include<opencv2/core/core.hpp>
 #include<mutex>
+#include<atomic>
 #include<shared_mutex>
 
 namespace ORB_SLAM2
@@ -136,7 +137,7 @@ protected:
      int mnFound;
 
      // Bad flag (we do not currently erase MapPoint from memory)
-     bool mbBad;
+     std::atomic<bool> mbBad;
      MapPoint* mpReplaced;
 
      // Scale invariance distances
