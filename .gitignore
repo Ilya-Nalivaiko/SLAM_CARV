@@ -49,3 +49,4 @@ test_data/
 # log files
 *.log
 tsan_dumps
+shared

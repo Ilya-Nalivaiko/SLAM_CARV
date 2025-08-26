@@ -192,6 +192,9 @@ SHELL ["/bin/sh", "-c"]
 # change default location to orbslamcarv
 RUN echo "cd /root/orbslam3/SLAM_CARV" >> /root/.bashrc
 
+# make shared dir
+RUN mkdir -p /root/orbslam3/SLAM_CARV/shared
+
 # set up VNC server
 EXPOSE 5900
 ENV X11VNC_P="password"

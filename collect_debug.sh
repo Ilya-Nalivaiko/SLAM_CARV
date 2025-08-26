@@ -9,7 +9,7 @@ PROC_NAME="Mono"
 PID=""
 DURATION=5            # seconds for time-limited strace
 LINE_LIMIT=30           # 0 = disabled; else limit strace lines
-OUTDIR_BASE="./tsan_dumps"
+OUTDIR_BASE="./shared/tsan_dumps"
 
 # --- locate PID(s) ---
 if [[ -z "$PID" ]]; then
