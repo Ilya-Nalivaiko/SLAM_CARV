@@ -95,7 +95,9 @@ int main(int argc, char **argv)
     ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub = nodeHandler.subscribe(imageTopic, 1, &ImageGrabber::GrabImage, &igb);
+    image_transport::ImageTransport it(nodeHandler);
+    image_transport::TransportHints th("raw", ros::TransportHints().tcpNoDelay());
+    image_transport::Subscriber sub = it.subscribe(imageTopic, 5, &ImageGrabber::GrabImage, &igb, th);
 
     pubTask = nodeHandler.advertise<std_msgs::String>("/chris/twc", 1);
     pubCARVScripts = nodeHandler.advertise<std_msgs::String>("/carv/script", 1);

@@ -60,6 +60,16 @@ void LoopClosing::Run()
 
     while(1)
     {
+        if (Stop())
+        {
+            while (isStopped() && !CheckFinish())
+            {
+                usleep(1000);
+            }
+            if (CheckFinish())
+                break;
+        }
+
         if (CheckFinish()) break;
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames())
@@ -788,5 +798,43 @@ bool LoopClosing::isFinished()
     return mbFinished;
 }
 
+
+
+bool LoopClosing::Stop()
+{
+    std::unique_lock<std::mutex> lock(mMutexStop);
+    if(mbStopRequested)
+    {
+        mbStopped = true;
+        return true;
+    }
+    return false;
+}
+
+void LoopClosing::RequestStop()
+{
+    std::unique_lock<std::mutex> lock(mMutexStop);
+    mbStopRequested = true;
+}
+
+bool LoopClosing::isStopped()
+{
+    std::unique_lock<std::mutex> lock(mMutexStop);
+    return mbStopped;
+}
+
+bool LoopClosing::stopRequested()
+{
+    std::unique_lock<std::mutex> lock(mMutexStop);
+    return mbStopRequested;
+}
+
+void LoopClosing::Release()
+{
+    std::unique_lock<std::mutex> lock(mMutexStop);
+    if(mbFinished) return;
+    mbStopped = false;
+    mbStopRequested = false;
+}
 
 } //namespace ORB_SLAM

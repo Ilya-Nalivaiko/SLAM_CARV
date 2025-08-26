@@ -57,6 +57,13 @@ public:
 
     void SetLocalMapper(LocalMapping* pLocalMapper);
 
+    // Cooperative stop controls (for safe reset)
+    void RequestStop();
+    bool isStopped();
+    void Release();
+    bool stopRequested();
+    bool Stop();
+
     // Main function
     void Run();
 
@@ -138,6 +145,11 @@ protected:
     bool mbStopGBA;
     std::mutex mMutexGBA;
     std::thread* mpThreadGBA;
+
+    // Stop flags for cooperative reset
+    bool mbStopped;
+    bool mbStopRequested;
+    std::mutex mMutexStop;
 
     // Fix scale in the stereo/RGB-D case
     bool mbFixScale;

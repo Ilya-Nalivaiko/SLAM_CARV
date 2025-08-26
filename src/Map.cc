@@ -38,9 +38,9 @@ void Map::AddKeyFrame(KeyFrame *pKF)
     mspKeyFrames.insert(pKF);
     if(pKF->mnId>mnMaxKFid)
         mnMaxKFid=pKF->mnId;
-    //std::cout<<"new key frame inserted! now count: "<< mspKeyFrames.size()<<std::endl;
+    std::cout<<"new key frame inserted! now count: "<< mspKeyFrames.size()<<std::endl;
     newestKeyFrame = pKF;
-    //std::cout<<newestKeyFrame->GetPoseInverse()<<std::endl;
+    std::cout<<newestKeyFrame->GetPoseInverse()<<std::endl;
 }
 
 KeyFrame * Map::GetNewestKeyFrame()

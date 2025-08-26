@@ -1570,18 +1570,38 @@ namespace ORB_SLAM2
         mpModeler->RequestReset();
         cout << " done" << endl;
 
-        // Reset Loop Closing
-        cout << "Reseting Loop Closing...";
-        mpLoopClosing->RequestReset();
+        // Stop Loop Closing to avoid DB writes during reset
+        cout << "Stopping Loop Closing...";
+        mpLoopClosing->RequestStop();
+        while(!mpLoopClosing->isStopped())
+            usleep(1000);
         cout << " done" << endl;
 
         // Clear BoW Database
         cout << "Reseting Database...";
         mpKeyFrameDB->clear();
+
+        // Allow Loop Closing to resume after DB reset
+        if(mpLoopClosing && mpLoopClosing->isStopped()) mpLoopClosing->Release();
+
         cout << " done" << endl;
 
+        // Ensure Local Mapping is quiescent before clearing the map
+        if(mpLocalMapper)
+        {
+            mpLocalMapper->RequestStop();
+            while(!mpLocalMapper->isStopped())
+                usleep(1000);
+        }
+
         // Clear Map (this erase MapPoints and KeyFrames)
+        cout << "Reseting Map...";
         mpMap->clear();
+
+        // Allow Local Mapping to resume after destructive phase
+        if(mpLocalMapper && mpLocalMapper->isStopped()) mpLocalMapper->Release();
+
+        cout << " done" << endl;
 
         KeyFrame::nNextId = 0;
         Frame::nNextId = 0;

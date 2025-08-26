@@ -222,14 +222,19 @@ namespace ORB_SLAM2
     void KeyFrame::EraseMapPointMatch(MapPoint* pMP)
     {
         int idx = pMP->GetIndexInKeyFrame(this);
-        if(idx>=0)
-            mvpMapPoints[idx]=static_cast<MapPoint*>(NULL);
+        if(idx>=0) {
+            unique_lock<mutex> lock(mMutexFeatures);
+            mvpMapPoints[idx] = static_cast<MapPoint*>(NULL);
+        }
     }
 
 
     void KeyFrame::ReplaceMapPointMatch(const size_t &idx, MapPoint* pMP)
     {
-        mvpMapPoints[idx]=pMP;
+    {
+        unique_lock<mutex> lock(mMutexFeatures);
+        mvpMapPoints[idx] = pMP;
+    }
     }
 
     set<MapPoint*> KeyFrame::GetMapPoints()
@@ -466,9 +471,18 @@ namespace ORB_SLAM2
         for(map<KeyFrame*,int>::iterator mit = mConnectedKeyFrameWeights.begin(), mend=mConnectedKeyFrameWeights.end(); mit!=mend; mit++)
             mit->first->EraseConnection(this);
 
-        for(size_t i=0; i<mvpMapPoints.size(); i++)
-            if(mvpMapPoints[i])
-                mvpMapPoints[i]->EraseObservation(this);
+        // Work on a snapshot to avoid iterating the member vector without a lock
+        std::vector<MapPoint*> vpCopy;
+        {
+            unique_lock<mutex> lockFeat(mMutexFeatures);
+            vpCopy = mvpMapPoints;
+        }
+        for (size_t i = 0; i < vpCopy.size(); ++i) {
+            MapPoint* pMP = vpCopy[i];
+            if (pMP)
+                pMP->EraseObservation(this);
+        }
+
         {
             unique_lock<mutex> lock(mMutexConnections);
             unique_lock<mutex> lock1(mMutexFeatures);
@@ -663,6 +677,7 @@ namespace ORB_SLAM2
     }
 
     cv::Mat KeyFrame::TransformPointWtoC(cv::Mat Pw){
+        unique_lock<mutex> lock(mMutexPose);
         cv::Mat Rcw = Tcw.rowRange(0,3).colRange(0,3);
         cv::Mat tcw = Tcw.rowRange(0,3).col(3);
         cv::Mat Pc = Rcw * Pw + tcw;
@@ -671,6 +686,7 @@ namespace ORB_SLAM2
 
     cv::Point2f KeyFrame::ProjectPointOnCamera(cv::Mat Pw){
         cv::Point2f xy;
+        unique_lock<mutex> lock(mMutexPose);
         cv::Mat Rcw = Tcw.rowRange(0,3).colRange(0,3);
         cv::Mat tcw = Tcw.rowRange(0,3).col(3);
         cv::Mat Pc = Rcw * Pw + tcw;
