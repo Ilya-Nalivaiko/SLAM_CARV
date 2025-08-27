@@ -80,7 +80,7 @@ namespace ORB_SLAM2
                     SearchInNeighbors();
                 }
 
-                mbAbortBA = false;
+                __atomic_store_n(&mbAbortBA, false, __ATOMIC_RELAXED);
 
                 if(!CheckNewKeyFrames() && !stopRequested())
                 {
@@ -127,7 +127,7 @@ namespace ORB_SLAM2
     {
         unique_lock<mutex> lock(mMutexNewKFs);
         mlNewKeyFrames.push_back(pKF);
-        mbAbortBA=true;
+        __atomic_store_n(&mbAbortBA, true, __ATOMIC_RELAXED);
     }
 
 
@@ -151,6 +151,7 @@ namespace ORB_SLAM2
         // Associate MapPoints to the new keyframe and update normal and descriptor
         const vector<MapPoint*> vpMapPointMatches = mpCurrentKeyFrame->GetMapPointMatches();
 
+        Map::ReadGuard rg(mpMap);
         for(size_t i=0; i<vpMapPointMatches.size(); i++)
         {
             MapPoint* pMP = vpMapPointMatches[i];
@@ -183,7 +184,7 @@ namespace ORB_SLAM2
     void LocalMapping::MapPointCulling()
     {
         // Check Recent Added MapPoints
-        list<MapPoint*>::iterator lit = mlpRecentAddedMapPoints.begin();
+        std::list<MapPoint*>::iterator lit = mlpRecentAddedMapPoints.begin();
         const unsigned long int nCurrentKFid = mpCurrentKeyFrame->mnId;
 
         int nThObs;
@@ -193,29 +194,46 @@ namespace ORB_SLAM2
             nThObs = 3;
         const int cnThObs = nThObs;
 
-        while(lit!=mlpRecentAddedMapPoints.end())
+        Map::ReadGuard rg(mpMap);
+        while (lit != mlpRecentAddedMapPoints.end())
         {
             MapPoint* pMP = *lit;
-            if(pMP->isBad())
+
+            // Snapshot thread-safe state up-front (avoid interleaved reads of internal fields)
+            const bool  bad  = pMP->isBad();
+            const float fr   = pMP->GetFoundRatio();
+            const int   obs  = pMP->Observations();
+
+            int firstKFid_est = 0;
+            if (KeyFrame* ref = pMP->GetReferenceKeyFrame())
+                firstKFid_est = ref->mnId;       // safer than unlocked mnFirstKFid
+            else
+                firstKFid_est = pMP->mnFirstKFid; // fallback if ref is null (legacy)
+
+            const int age = static_cast<int>(nCurrentKFid) - firstKFid_est;
+
+            if (bad)
             {
                 lit = mlpRecentAddedMapPoints.erase(lit);
             }
-            else if(pMP->GetFoundRatio()<0.25f )
+            else if (fr < 0.25f)
             {
                 pMP->SetBadFlag();
                 lit = mlpRecentAddedMapPoints.erase(lit);
             }
-            else if(((int)nCurrentKFid-(int)pMP->mnFirstKFid)>=2 && pMP->Observations()<=cnThObs)
+            else if (age >= 2 && obs <= cnThObs)
             {
                 pMP->SetBadFlag();
                 lit = mlpRecentAddedMapPoints.erase(lit);
             }
-            else if(((int)nCurrentKFid-(int)pMP->mnFirstKFid)>=3)
+            else if (age >= 3)
             {
                 lit = mlpRecentAddedMapPoints.erase(lit);
             }
             else
-                lit++;
+            {
+                ++lit;
+            }
         }
     }
 
@@ -508,6 +526,7 @@ namespace ORB_SLAM2
         vector<MapPoint*> vpFuseCandidates;
         vpFuseCandidates.reserve(vpTargetKFs.size()*vpMapPointMatches.size());
 
+        Map::ReadGuard rg(mpMap);
         for(vector<KeyFrame*>::iterator vitKF=vpTargetKFs.begin(), vendKF=vpTargetKFs.end(); vitKF!=vendKF; vitKF++)
         {
             KeyFrame* pKFi = *vitKF;
@@ -572,7 +591,7 @@ namespace ORB_SLAM2
         unique_lock<mutex> lock(mMutexStop);
         mbStopRequested = true;
         unique_lock<mutex> lock2(mMutexNewKFs);
-        mbAbortBA = true;
+        __atomic_store_n(&mbAbortBA, true, __ATOMIC_RELAXED);
     }
 
     bool LocalMapping::Stop()
@@ -608,6 +627,7 @@ namespace ORB_SLAM2
             return;
         mbStopped = false;
         mbStopRequested = false;
+        __atomic_store_n(&mbAbortBA, false, __ATOMIC_RELAXED);
         for(list<KeyFrame*>::iterator lit = mlNewKeyFrames.begin(), lend=mlNewKeyFrames.end(); lit!=lend; lit++)
             delete *lit;
         mlNewKeyFrames.clear();
@@ -641,7 +661,7 @@ namespace ORB_SLAM2
 
     void LocalMapping::InterruptBA()
     {
-        mbAbortBA = true;
+        __atomic_store_n(&mbAbortBA, true, __ATOMIC_RELAXED);
     }
 
     void LocalMapping::KeyFrameCulling()

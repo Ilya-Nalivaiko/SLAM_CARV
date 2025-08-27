@@ -120,44 +120,44 @@ int main(int argc, char **argv)
 
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {
-    // Copy the ROS image to cv::Mat
+    // Copy ROS image
     cv_bridge::CvImageConstPtr cv_ptr;
-    try {
-        cv_ptr = cv_bridge::toCvShare(msg);
-    } catch (cv_bridge::Exception& e) {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
-        return;
-    }
+    try { cv_ptr = cv_bridge::toCvShare(msg); }
+    catch (cv_bridge::Exception& e) { ROS_ERROR("cv_bridge exception: %s", e.what()); return; }
 
     // Run tracking
     mpSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec());
 
-    // --- FIX: read newestKeyFrame under the same mutex writers use ---
-    ORB_SLAM2::KeyFrame* pKF = nullptr;
+    // ---- SAFE SNAPSHOT UNDER MAP LOCK ----
+    int     kfId = -1;
+    double  kfTs = 0.0;
+    cv::Mat TWC;  // pose snapshot
+
     {
         std::unique_lock<std::mutex> lk(mpSLAM->mpMap->mMutexMap);
-        pKF = mpSLAM->mpMap->newestKeyFrame;
-    }
+        std::shared_ptr<ORB_SLAM2::KeyFrame> spKF = mpSLAM->mpMap->GetNewestKeyFrame();
+        if (spKF && spKF->mnId > max_kfId) {
+            kfId = spKF->mnId;
+            kfTs = spKF->mTimeStamp;
+            TWC  = spKF->GetPoseInverse();
+        }
+    } // unlock — after copying out everything needed
 
-    if (pKF && pKF->mnId > max_kfId)
+    if (kfId > max_kfId && !TWC.empty())
     {
-        cv::Mat TWC = pKF->GetPoseInverse(); // thread-safe inside KeyFrame
-
-        std_msgs::String msg;              // publish KF id, timestamp, pose
+        std_msgs::String msg;
         std::stringstream ss;
-        ss << pKF->mnId << ",";
-        ss << std::setprecision(15) << pKF->mTimeStamp << ",";
+        ss << kfId << ",";
+        ss << std::setprecision(15) << kfTs << ",";
         for (int r = 0; r < TWC.rows; ++r)
             for (int c = 0; c < TWC.cols; ++c)
                 ss << TWC.at<float>(r, c) << ",";
-
         msg.data = ss.str();
         pubTask.publish(msg);
-
-        max_kfId = pKF->mnId;              // update last-published id
+        max_kfId = kfId;
     }
 
-    // Publish CARV transcript safely (Modeler provides its own lock)
+    // Publish CARV transcript
     std_msgs::String msgScript;
     msgScript.data = mpSLAM->mpModeler->GetNewCommand();
     if (!msgScript.data.empty())

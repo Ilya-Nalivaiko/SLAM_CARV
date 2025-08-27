@@ -193,7 +193,49 @@ namespace ORB_SLAM2 {
             return vPOnLine;
         }
 
-        // MapPoints and there projection on kf
+        struct PoseCache {
+            cv::Mat Rcw; // 3x3 CV_32F
+            cv::Mat tcw; // 3x1 CV_32F
+            float fx, fy, cx, cy;
+        };
+
+        auto BuildPoseCache = [](KeyFrame* kf) {
+            PoseCache pc;
+
+            cv::Mat Twc = kf->GetPoseInverse();        // 4x4, CV_32F
+            cv::Mat Rwc = Twc.rowRange(0,3).colRange(0,3);
+            cv::Mat twc = Twc.rowRange(0,3).col(3);
+
+            // Rcw = Rwc^T  (avoid MatExpr.clone())
+            cv::transpose(Rwc, pc.Rcw);                // pc.Rcw is a Mat
+
+            // tcw = -Rcw * twc
+            cv::Mat tmp = pc.Rcw * twc;                // tmp is Mat
+            pc.tcw = -1.0f * tmp;                      // negate into a Mat
+
+            pc.fx = kf->fx; pc.fy = kf->fy; pc.cx = kf->cx; pc.cy = kf->cy;
+            return pc;
+        };
+
+
+        auto Project = [](const PoseCache& pc, const cv::Mat& Pw){
+            cv::Mat Pc = pc.Rcw * Pw + pc.tcw;
+            const float Z = Pc.at<float>(2);
+            if (Z <= 0) return cv::Point2f(-1.f,-1.f);
+            const float u = pc.fx * Pc.at<float>(0) / Z + pc.cx;
+            const float v = pc.fy * Pc.at<float>(1) / Z + pc.cy;
+            return cv::Point2f(u,v);
+        };
+
+        auto TransformWtoC = [](const PoseCache& pc, const cv::Mat& Pw){
+            return pc.Rcw * Pw + pc.tcw;
+        };
+
+        PoseCache pcRef = BuildPoseCache(pKF);
+        std::vector<PoseCache> vpcMatch; vpcMatch.reserve(vpKFMatch.size());
+        for (auto* kfM : vpKFMatch) vpcMatch.push_back(BuildPoseCache(kfM));
+
+        // MapPoints and their projection on kf
         std::map<MapPoint*, cv::Point2f> mpMPonKF;
 
         // common points among kfs
@@ -239,13 +281,13 @@ namespace ORB_SLAM2 {
 
         for (std::set<MapPoint*>::iterator it = spMP.begin(); it != spMP.end(); it++){
             // need to test if xy > 0
-            cv::Point2f xy = pKF->ProjectPointOnCamera((*it)->GetWorldPos());
+            cv::Point2f xy = Project(pcRef, (*it)->GetWorldPos());
             if(xy.x < 0 || xy.y < 0)
                 continue;
 
             std::vector<cv::Point2f> vXYMatch;
             for (size_t indKFMatch = 0; indKFMatch < vpKFMatch.size(); indKFMatch++) {
-                cv::Point2f xyMatch = vpKFMatch[indKFMatch]->ProjectPointOnCamera((*it)->GetWorldPos());
+                cv::Point2f xyMatch = Project(vpcMatch[indKFMatch], (*it)->GetWorldPos());
                 if (xyMatch.x < 0 || xyMatch.y < 0){
                     break;
                 }
@@ -292,11 +334,6 @@ namespace ORB_SLAM2 {
                 }
             }
 
-//            // count how many times a point is verified
-//            std::map<MapPoint*,int> mpMPSupportedAll;
-//            for (auto it = line.mmpMPProj.begin(); it != line.mmpMPProj.end(); it++) {
-//                mpMPSupportedAll.insert(std::map<MapPoint*,int>::value_type(it->first,0));
-//            }
             // count how many times the points are verified
             int verifiedKF = 0;
             for (size_t indKFMatch = 0; indKFMatch < vpKFMatch.size(); indKFMatch++) {
@@ -335,9 +372,6 @@ namespace ORB_SLAM2 {
 
                 if (vMPSupported.size() >= 2) {
                     verifiedKF++;
-//                    for (auto it = vMPSupported.begin(); it != vMPSupported.end(); it++) {
-//                        mpMPSupportedAll[*it]++;
-//                    }
                     for (auto it = line.mmpMPProj.begin(); it != line.mmpMPProj.end(); it++){
                         if (std::find(vMPSupported.begin(),vMPSupported.end(),it->first) == vMPSupported.end())
                             line.mmpMPProj.erase(it);
@@ -368,8 +402,8 @@ namespace ORB_SLAM2 {
                 cv::Mat p1Mat = pMPFirst->GetWorldPos().clone();
                 cv::Mat p2Mat = pMPLast->GetWorldPos().clone();
 
-                cv::Mat p1C = pKF->TransformPointWtoC(p1Mat);
-                cv::Mat p2C = pKF->TransformPointWtoC(p2Mat);
+                cv::Mat p1C = TransformWtoC(pcRef, p1Mat);
+                cv::Mat p2C = TransformWtoC(pcRef, p2Mat);
                 cv::Mat diffC = p2C - p1C;
                 float diffx = std::abs(diffC.at<float>(0));
                 float diffy = std::abs(diffC.at<float>(1));
@@ -400,14 +434,6 @@ namespace ORB_SLAM2 {
              << " lines are detected from keyframe with " << spMP.size()  << " tracked points." << endl;
 
 
-        //find points that are not bad from keyframes that are not bad
-        //which are on the lines (supporting the 3d position calculation)
-        //densify by add points from lines
-
-        // maybe: remove line points from a keyframe if the keyframe is deleted
-        // maybe: remove line points if too many supporting points are deleted
-        // maybe: move line points if supporting points are moved
-
         {
             //update lines and image to draw
             unique_lock<mutex> lock(mMutexLines);
@@ -417,6 +443,7 @@ namespace ORB_SLAM2 {
 
         return vPOnLine;
     }
+
 
 
 

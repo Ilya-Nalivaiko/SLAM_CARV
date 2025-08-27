@@ -718,7 +718,7 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
     }
 
     if(pbStopFlag)
-        if(*pbStopFlag)
+        if(__atomic_load_n(pbStopFlag, __ATOMIC_RELAXED))
             return;
 
     optimizer.initializeOptimization();
@@ -727,7 +727,7 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
     bool bDoMore= true;
 
     if(pbStopFlag)
-        if(*pbStopFlag)
+        if(__atomic_load_n(pbStopFlag, __ATOMIC_RELAXED))
             bDoMore = false;
 
     if(bDoMore)
@@ -808,7 +808,7 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
     }
 
     // Get Map Mutex
-    unique_lock<mutex> lock(pMap->mMutexMapUpdate);
+    unique_lock<shared_mutex> lock(pMap->mMutexMapUpdate);
 
     if(!vToErase.empty())
     {
@@ -1068,7 +1068,7 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
     optimizer.initializeOptimization();
     optimizer.optimize(20);
 
-    unique_lock<mutex> lock(pMap->mMutexMapUpdate);
+    unique_lock<shared_mutex> lock(pMap->mMutexMapUpdate);
 
     // SE3 Pose Recovering. Sim3:[sR t;0 1] -> SE3:[R t/s;0 1]
     for(size_t i=0;i<vpKFs.size();i++)

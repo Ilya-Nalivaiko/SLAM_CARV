@@ -39,14 +39,12 @@ void Map::AddKeyFrame(KeyFrame *pKF)
     if(pKF->mnId>mnMaxKFid)
         mnMaxKFid=pKF->mnId;
     std::cout<<"new key frame inserted! now count: "<< mspKeyFrames.size()<<std::endl;
-    newestKeyFrame = pKF;
-    std::cout<<newestKeyFrame->GetPoseInverse()<<std::endl;
+    newestKeyFrame.reset(pKF, [](KeyFrame*){});
 }
 
-KeyFrame * Map::GetNewestKeyFrame()
+std::shared_ptr<KeyFrame> Map::GetNewestKeyFrame()
 {
-  //unique_lock<mutex> lock(mMutexMap);
-  return newestKeyFrame;
+    return newestKeyFrame;
 }
 
 void Map::AddMapPoint(MapPoint *pMP)
@@ -145,21 +143,36 @@ long unsigned int Map::GetMaxKFid()
 
 void Map::clear()
 {
-    // Block tracker/mapper updates, then take the map container lock.
-    std::unique_lock<std::mutex> lkUpdate(mMutexMapUpdate);
-    std::unique_lock<std::mutex> lk(mMutexMap);
+    // 1) Block tracker/mapper updates, then take the map container lock.
+    {
+        std::unique_lock<std::shared_mutex> lkUpdate(mMutexMapUpdate);
+        std::unique_lock<std::mutex> lk(mMutexMap);
 
-    for (set<MapPoint*>::iterator sit = mspMapPoints.begin(), send = mspMapPoints.end(); sit != send; ++sit)
-        delete *sit;
+        // 2) Do NOT delete MapPoints here. Mark them bad; deletion is deferred.
+        //    This avoids racing with readers that still hold cv::Mat headers
+        //    into MapPoint data (the cv::Mat::release() crash you saw).
+        for (MapPoint* pMP : mspMapPoints)
+        {
+            if (pMP) pMP->SetBadFlag();  // queues into mTrash via DeferErase()
+        }
 
-    for (set<KeyFrame*>::iterator sit = mspKeyFrames.begin(), send = mspKeyFrames.end(); sit != send; ++sit)
-        delete *sit;
+        // 3) With points detached from KFs, it’s safe to delete KeyFrames under the lock.
+        for (KeyFrame* pKF : mspKeyFrames)
+        {
+            delete pKF;
+        }
 
-    mspMapPoints.clear();
-    mspKeyFrames.clear();
-    mnMaxKFid = 0;
-    mvpReferenceMapPoints.clear();
-    mvpKeyFrameOrigins.clear();
+        mspMapPoints.clear();
+        mspKeyFrames.clear();
+        mnMaxKFid = 0;
+        mvpReferenceMapPoints.clear();
+        mvpKeyFrameOrigins.clear();
+        // locks released at scope end
+    }
+
+    // 4) Actually free MapPoints behind a barrier on the update mutex.
+    //    This prevents races with Tracking still holding cv::Mat headers.
+    CollectTrash();
 }
 
 void Map::DeferErase(MapPoint* pMP)
@@ -171,8 +184,8 @@ void Map::DeferErase(MapPoint* pMP)
 
 void Map::CollectTrash()
 {
-    // Block Tracking while we actually free memory
-    std::unique_lock<std::mutex> lkUpdate(mMutexMapUpdate);   // existing map-update mutex
+    // Stop the world for Tracking while we actually free memory.
+    std::unique_lock<std::shared_mutex> lkUpdate(mMutexMapUpdate);
 
     std::list<MapPoint*> to_delete;
     {

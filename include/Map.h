@@ -27,6 +27,7 @@
 #include <set>
 #include <list>
 #include <mutex>
+#include <shared_mutex>
 
 #include <iostream>
 
@@ -77,13 +78,17 @@ namespace ORB_SLAM2 {
 
         long unsigned int GetMaxKFid();
 
-        KeyFrame * GetNewestKeyFrame();
+        std::shared_ptr<KeyFrame> GetNewestKeyFrame();
 
         void clear();
 
         vector<KeyFrame *> mvpKeyFrameOrigins;
 
-        std::mutex mMutexMapUpdate;
+        mutable std::shared_mutex mMutexMapUpdate;
+        struct ReadGuard {
+            std::shared_lock<std::shared_mutex> lk;
+            explicit ReadGuard(Map* m) : lk(m->mMutexMapUpdate) {}
+        };
 
         // This avoid that two points are created simultaneously in separate threads (id conflict)
         std::mutex mMutexPointCreation;
@@ -93,7 +98,7 @@ namespace ORB_SLAM2 {
         void SetModeler(Modeler* pModeler){
             mpModeler = pModeler;
         }
-        KeyFrame * newestKeyFrame;
+        std::shared_ptr<KeyFrame> newestKeyFrame;
 
         std::mutex mMutexMap;
     protected:

@@ -30,7 +30,7 @@
 #include "KeyFrameDatabase.h"
 
 #include <mutex>
-
+#include <shared_mutex>
 
 namespace ORB_SLAM2
 {
@@ -233,7 +233,7 @@ protected:
 
     Map* mpMap;
 
-    std::mutex mMutexPose;
+    mutable std::shared_mutex mMutexPose;
     std::mutex mMutexConnections;
     std::mutex mMutexFeatures;
 };

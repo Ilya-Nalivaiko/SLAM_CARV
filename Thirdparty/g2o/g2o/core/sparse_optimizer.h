@@ -34,6 +34,7 @@
 #include "batch_stats.h"
 
 #include <map>
+#include <atomic>
 
 namespace g2o {
 
@@ -185,7 +186,7 @@ namespace g2o {
     bool* forceStopFlag() const { return _forceStopFlag;};
 
     //! if external stop flag is given, return its state. False otherwise
-    bool terminate() {return _forceStopFlag ? (*_forceStopFlag) : false; }
+    bool terminate() {return _forceStopFlag ? (__atomic_load_n(_forceStopFlag, __ATOMIC_RELAXED)) : false; }
 
     //! the index mapping of the vertices
     const VertexContainer& indexMapping() const {return _ivMap;}

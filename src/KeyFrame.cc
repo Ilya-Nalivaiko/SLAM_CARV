@@ -69,7 +69,7 @@ namespace ORB_SLAM2
 
     void KeyFrame::SetPose(const cv::Mat &Tcw_)
     {
-        unique_lock<mutex> lock(mMutexPose);
+        std::unique_lock<std::shared_mutex> lock(mMutexPose);
         Tcw_.copyTo(Tcw);
         cv::Mat Rcw = Tcw.rowRange(0,3).colRange(0,3);
         cv::Mat tcw = Tcw.rowRange(0,3).col(3);
@@ -85,38 +85,38 @@ namespace ORB_SLAM2
 
     cv::Mat KeyFrame::GetPose()
     {
-        unique_lock<mutex> lock(mMutexPose);
+        std::shared_lock<std::shared_mutex> lock(mMutexPose);
         return Tcw.clone();
     }
 
     cv::Mat KeyFrame::GetPoseInverse()
     {
-        unique_lock<mutex> lock(mMutexPose);
+        std::shared_lock<std::shared_mutex> lock(mMutexPose);
         return Twc.clone();
     }
 
     cv::Mat KeyFrame::GetCameraCenter()
     {
-        unique_lock<mutex> lock(mMutexPose);
+        std::shared_lock<std::shared_mutex> lock(mMutexPose);
         return Ow.clone();
     }
 
     cv::Mat KeyFrame::GetStereoCenter()
     {
-        unique_lock<mutex> lock(mMutexPose);
+        std::shared_lock<std::shared_mutex> lock(mMutexPose);
         return Cw.clone();
     }
 
 
     cv::Mat KeyFrame::GetRotation()
     {
-        unique_lock<mutex> lock(mMutexPose);
+        std::shared_lock<std::shared_mutex> lock(mMutexPose);
         return Tcw.rowRange(0,3).colRange(0,3).clone();
     }
 
     cv::Mat KeyFrame::GetTranslation()
     {
-        unique_lock<mutex> lock(mMutexPose);
+        std::shared_lock<std::shared_mutex> lock(mMutexPose);
         return Tcw.rowRange(0,3).col(3).clone();
     }
 
@@ -241,6 +241,7 @@ namespace ORB_SLAM2
     {
         unique_lock<mutex> lock(mMutexFeatures);
         set<MapPoint*> s;
+        Map::ReadGuard rg(mpMap);
         for(size_t i=0, iend=mvpMapPoints.size(); i<iend; i++)
         {
             if(!mvpMapPoints[i])
@@ -258,6 +259,7 @@ namespace ORB_SLAM2
 
         int nPoints=0;
         const bool bCheckObs = minObs>0;
+        Map::ReadGuard rg(mpMap);
         for(int i=0; i<N; i++)
         {
             MapPoint* pMP = mvpMapPoints[i];
@@ -304,6 +306,7 @@ namespace ORB_SLAM2
 
         //For all map points in keyframe check in which other keyframes are they seen
         //Increase counter for those keyframes
+        Map::ReadGuard rg(mpMap);
         for(vector<MapPoint*>::iterator vit=vpMP.begin(), vend=vpMP.end(); vit!=vend; vit++)
         {
             MapPoint* pMP = *vit;
@@ -475,6 +478,7 @@ namespace ORB_SLAM2
         std::vector<MapPoint*> vpCopy;
         {
             unique_lock<mutex> lockFeat(mMutexFeatures);
+            Map::ReadGuard rg(mpMap);
             vpCopy = mvpMapPoints;
         }
         for (size_t i = 0; i < vpCopy.size(); ++i) {
@@ -637,7 +641,7 @@ namespace ORB_SLAM2
             const float y = (v-cy)*z*invfy;
             cv::Mat x3Dc = (cv::Mat_<float>(3,1) << x, y, z);
 
-            unique_lock<mutex> lock(mMutexPose);
+            std::shared_lock<std::shared_mutex> lock(mMutexPose);
             return Twc.rowRange(0,3).colRange(0,3)*x3Dc+Twc.rowRange(0,3).col(3);
         }
         else
@@ -650,8 +654,11 @@ namespace ORB_SLAM2
         cv::Mat Tcw_;
         {
             unique_lock<mutex> lock(mMutexFeatures);
-            unique_lock<mutex> lock2(mMutexPose);
+            Map::ReadGuard rg(mpMap);
             vpMapPoints = mvpMapPoints;
+        }
+        {
+            std::shared_lock<std::shared_mutex> lock2(mMutexPose);
             Tcw_ = Tcw.clone();
         }
 
@@ -662,9 +669,9 @@ namespace ORB_SLAM2
         float zcw = Tcw_.at<float>(2,3);
         for(int i=0; i<N; i++)
         {
-            if(mvpMapPoints[i])
+            if(vpMapPoints[i])
             {
-                MapPoint* pMP = mvpMapPoints[i];
+                MapPoint* pMP = vpMapPoints[i];
                 cv::Mat x3Dw = pMP->GetWorldPos();
                 float z = Rcw2.dot(x3Dw)+zcw;
                 vDepths.push_back(z);
@@ -677,7 +684,7 @@ namespace ORB_SLAM2
     }
 
     cv::Mat KeyFrame::TransformPointWtoC(cv::Mat Pw){
-        unique_lock<mutex> lock(mMutexPose);
+        std::shared_lock<std::shared_mutex> lock(mMutexPose);
         cv::Mat Rcw = Tcw.rowRange(0,3).colRange(0,3);
         cv::Mat tcw = Tcw.rowRange(0,3).col(3);
         cv::Mat Pc = Rcw * Pw + tcw;
@@ -686,7 +693,7 @@ namespace ORB_SLAM2
 
     cv::Point2f KeyFrame::ProjectPointOnCamera(cv::Mat Pw){
         cv::Point2f xy;
-        unique_lock<mutex> lock(mMutexPose);
+        std::shared_lock<std::shared_mutex> lock(mMutexPose);
         cv::Mat Rcw = Tcw.rowRange(0,3).colRange(0,3);
         cv::Mat tcw = Tcw.rowRange(0,3).col(3);
         cv::Mat Pc = Rcw * Pw + tcw;

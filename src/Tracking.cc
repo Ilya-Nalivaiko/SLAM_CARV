@@ -44,7 +44,17 @@ using namespace std;
 namespace ORB_SLAM2
 {
 
-    // SAFETY: serialize tracking critical sections
+    
+// -------- Debug toggles ----------
+#define TRACK_DBG 1
+#if TRACK_DBG
+  #include <iostream>
+  #define DBG(tag, msg) do { std::cout << "[" << tag << "] " << msg << std::endl; } while(0)
+#else
+  #define DBG(tag, msg) do {} while(0)
+#endif
+// ----------------------------------
+// SAFETY: serialize tracking critical sections
     static std::mutex g_trackMutex;
 
     Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor):
@@ -184,6 +194,7 @@ namespace ORB_SLAM2
             }
             else
             {
+                DBG("Init","Initialize() failed");
                 cvtColor(mImGray,mImGray,cv::COLOR_BGR2GRAY);
                 cvtColor(imGrayRight,imGrayRight,cv::COLOR_BGR2GRAY);
             }
@@ -203,6 +214,7 @@ namespace ORB_SLAM2
         }
 
         mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
+        DBG("Track", "Grab mono frame id=" << Frame::nNextId-1 << " ts=" << timestamp << " state=" << mState << " keys=" << mCurrentFrame.mvKeys.size());
 
         Track();
 
@@ -301,12 +313,13 @@ namespace ORB_SLAM2
         if(mState==NO_IMAGES_YET)
         {
             mState = NOT_INITIALIZED;
+            DBG("Track","State -> NOT_INITIALIZED");
         }
 
         mLastProcessedState=mState;
 
         // Get Map Mutex -> Map cannot be changed
-        unique_lock<mutex> lock(mpMap->mMutexMapUpdate, std::defer_lock);
+        unique_lock<shared_mutex> lock(mpMap->mMutexMapUpdate, std::defer_lock);
 
         if(mState==NOT_INITIALIZED)
         {
@@ -319,7 +332,9 @@ namespace ORB_SLAM2
             else
             {
                 lock.lock();
+                DBG("Init","Begin MonocularInitialization()");
                 MonocularInitialization();
+                DBG("Init","End MonocularInitialization(), state=" << mState);
                 lock.unlock();
             }
  
@@ -454,6 +469,7 @@ namespace ORB_SLAM2
             else
                 mState=LOST;
 
+            DBG("Track","After TrackLocalMap: bOK=" << bOK << " -> state=" << mState << " matchesInliers=" << mnMatchesInliers);
             // Update drawer
             mpFrameDrawer->Update(this);
 
@@ -474,6 +490,8 @@ namespace ORB_SLAM2
                 mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.mTcw);
 
                 // Clean VO matches
+                
+                Map::ReadGuard rg(mpMap);
                 for(int i=0; i<mCurrentFrame.N; i++)
                 {
                     MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
@@ -613,6 +631,7 @@ namespace ORB_SLAM2
             if(mCurrentFrame.mvKeys.size()>100)
             {
                 mInitialFrame = Frame(mCurrentFrame);
+                DBG("Init","Seed ref frame: keys=" << mCurrentFrame.mvKeys.size());
                 mLastFrame = Frame(mCurrentFrame);
                 mvbPrevMatched.resize(mCurrentFrame.mvKeysUn.size());
                 for(size_t i=0; i<mCurrentFrame.mvKeysUn.size(); i++)
@@ -633,6 +652,7 @@ namespace ORB_SLAM2
             // Try to initialize
             if((int)mCurrentFrame.mvKeys.size()<=100)
             {
+                DBG("Init","Abort: not enough keys in current (" << mCurrentFrame.mvKeys.size() << ")");
                 delete mpInitializer;
                 mpInitializer = static_cast<Initializer*>(NULL);
                 fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
@@ -643,6 +663,7 @@ namespace ORB_SLAM2
             ORBmatcher matcher(0.9,true);
             int nmatches = matcher.SearchForInitialization(mInitialFrame,mCurrentFrame,mvbPrevMatched,mvIniMatches,100);
 
+            DBG("Init","SearchForInitialization matches=" << nmatches);
             // Check if there are enough correspondences
             if(nmatches<100)
             {
@@ -657,7 +678,9 @@ namespace ORB_SLAM2
 
             if(mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated))
             {
-                for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
+                                {int kept=0; for(size_t i=0;i<vbTriangulated.size();++i) if(vbTriangulated[i]) kept++;}
+                DBG("Init","Initialize() OK. Triangulated=" << std::count(vbTriangulated.begin(), vbTriangulated.end(), true) << "/" << vbTriangulated.size());
+for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
                 {
                     if(mvIniMatches[i]>=0 && !vbTriangulated[i])
                     {
@@ -727,15 +750,19 @@ namespace ORB_SLAM2
         // Bundle Adjustment
         cout << "New Map created with " << mpMap->MapPointsInMap() << " points" << endl;
 
+        DBG("Init","GBA begin (20 iters)...");
         Optimizer::GlobalBundleAdjustemnt(mpMap,20);
 
-        // Set median depth to 1
+        
+        DBG("Init","GBA end.");
+// Set median depth to 1
         float medianDepth = pKFini->ComputeSceneMedianDepth(2);
         float invMedianDepth = 1.0f/medianDepth;
 
         if(medianDepth<0 || pKFcur->TrackedMapPoints(1)<100)
         {
             cout << "Wrong initialization, reseting..." << endl;
+            DBG("Init","Wrong init: medianDepth=" << medianDepth << " trackedMP(>=1obs)=" << pKFcur->TrackedMapPoints(1) << " -> Reset()");
             Reset();
             return;
         }
@@ -917,6 +944,7 @@ namespace ORB_SLAM2
         UpdateLastFrame();
 
         if (mVelocity.empty() || mLastFrame.mTcw.empty()){
+            DBG("MM","Early out: mVelocity.empty=" << mVelocity.empty() << " lastTcw.empty=" << mLastFrame.mTcw.empty() << " frame=" << mCurrentFrame.mnId);
             std::cerr << "Tried to track with empty matrix" << std::endl;
             return false;
         }
@@ -1082,6 +1110,8 @@ namespace ORB_SLAM2
         const bool c1c =  mSensor!=System::MONOCULAR && (mnMatchesInliers<nRefMatches*0.25 || bNeedToInsertClose) ;
         // Condition 2: Few tracked points compared to reference keyframe. Lots of visual odometry compared to map matches.
         const bool c2 = ((mnMatchesInliers<nRefMatches*thRefRatio|| bNeedToInsertClose) && mnMatchesInliers>15);
+        DBG("KF","nKFs=" << nKFs << " nRefMatches=" << nRefMatches << " inliers=" << mnMatchesInliers << " LMidle=" << bLocalMappingIdle << " c1a=" << c1a << " c1b=" << c1b << " c1c=" << c1c << " c2=" << c2);
+
 
         if((c1a||c1b||c1c)&&c2)
         {
@@ -1191,6 +1221,8 @@ namespace ORB_SLAM2
 
     void Tracking::SearchLocalPoints()
     {
+        
+        Map::ReadGuard rg(mpMap);
         // Do not search map points already matched
         for(vector<MapPoint*>::iterator vit=mCurrentFrame.mvpMapPoints.begin(), vend=mCurrentFrame.mvpMapPoints.end(); vit!=vend; vit++)
         {
@@ -1253,6 +1285,8 @@ namespace ORB_SLAM2
 
     void Tracking::UpdateLocalPoints()
     {
+        
+        Map::ReadGuard rg(mpMap);
         mvpLocalMapPoints.clear();
 
         for(vector<KeyFrame*>::const_iterator itKF=mvpLocalKeyFrames.begin(), itEndKF=mvpLocalKeyFrames.end(); itKF!=itEndKF; itKF++)
@@ -1279,6 +1313,8 @@ namespace ORB_SLAM2
 
     void Tracking::UpdateLocalKeyFrames()
     {
+        
+        Map::ReadGuard rg(mpMap);
         // Each map point vote for the keyframes in which it has been observed
         map<KeyFrame*,int> keyframeCounter;
         for(int i=0; i<mCurrentFrame.N; i++)
@@ -1389,8 +1425,9 @@ namespace ORB_SLAM2
 
     bool Tracking::Relocalization()
     {
-    // SAFETY: protect from concurrent access
-    std::lock_guard<std::mutex> lk(g_trackMutex);
+        DBG("Reloc","Begin; computing BoW + candidates...");
+        // SAFETY: protect from concurrent access
+        std::lock_guard<std::mutex> lk(g_trackMutex);
 
         // Compute Bag of Words Vector
         mCurrentFrame.ComputeBoW();
@@ -1402,50 +1439,55 @@ namespace ORB_SLAM2
         if(vpCandidateKFs.empty())
             return false;
 
+        DBG("Reloc","Candidates=" << vpCandidateKFs.size());
         const int nKFs = vpCandidateKFs.size();
 
         // We perform first an ORB matching with each candidate
         // If enough matches are found we setup a PnP solver
         ORBmatcher matcher(0.75,true);
 
-        vector<PnPsolver*> vpPnPsolvers;
-        vpPnPsolvers.resize(nKFs);
+        vector<PnPsolver*> vpPnPsolvers(nKFs, static_cast<PnPsolver*>(nullptr));
+        vector<vector<MapPoint*>> vvpMapPointMatches(nKFs);
+        vector<bool> vbDiscarded(nKFs, false);
 
-        vector<vector<MapPoint*> > vvpMapPointMatches;
-        vvpMapPointMatches.resize(nKFs);
+        // Adaptive acceptance thresholds based on the number of features in the frame
+        const int N = std::max(1, mCurrentFrame.N);
+        const int kMinAccept = std::max(30, N/4);   // accept if >= 25% of features or at least 30
+        const int kMinPnP    = std::max(10, N/10);  // early cut: at least 10% or 10
+        const int kProjTopUpCoarse = 12;            // projection top-up coarse window (pixels)
+        const int kProjTopUpFine   = 5;             // projection top-up fine window (pixels)
 
-        vector<bool> vbDiscarded;
-        vbDiscarded.resize(nKFs);
-
-        int nCandidates=0;
+        int nCandidates = 0;
 
         for(int i=0; i<nKFs; i++)
         {
             KeyFrame* pKF = vpCandidateKFs[i];
             if(pKF->isBad())
-                vbDiscarded[i] = true;
-            else
             {
-                int nmatches = matcher.SearchByBoW(pKF,mCurrentFrame,vvpMapPointMatches[i]);
-                if(nmatches<15)
-                {
-                    vbDiscarded[i] = true;
-                    continue;
-                }
-                else
-                {
-                    PnPsolver* pSolver = new PnPsolver(mCurrentFrame,vvpMapPointMatches[i]);
-                    pSolver->SetRansacParameters(0.99,10,300,4,0.5,5.991);
-                    vpPnPsolvers[i] = pSolver;
-                    nCandidates++;
-                }
+                vbDiscarded[i] = true;
+                continue;
             }
+
+            int nmatches = matcher.SearchByBoW(pKF, mCurrentFrame, vvpMapPointMatches[i]);
+            DBG("Reloc","KF#" << pKF->mnId << " BoW nmatches=" << nmatches);
+
+            if(nmatches < 15)
+            {
+                vbDiscarded[i] = true;
+                continue;
+            }
+
+            PnPsolver* pSolver = new PnPsolver(mCurrentFrame, vvpMapPointMatches[i]);
+            pSolver->SetRansacParameters(0.99, 10, 300, 4, 0.5, 5.991);
+            vpPnPsolvers[i] = pSolver;
+            nCandidates++;
         }
 
         // Alternatively perform some iterations of P4P RANSAC
         // Until we found a camera pose supported by enough inliers
         bool bMatch = false;
         ORBmatcher matcher2(0.9,true);
+        int bestInliers = 0;
 
         while(nCandidates>0 && !bMatch)
         {
@@ -1456,16 +1498,16 @@ namespace ORB_SLAM2
 
                 // Perform 5 Ransac Iterations
                 vector<bool> vbInliers;
-                int nInliers;
-                bool bNoMore;
+                int nInliers = 0;
+                bool bNoMore = false;
 
                 PnPsolver* pSolver = vpPnPsolvers[i];
-                cv::Mat Tcw = pSolver->iterate(5,bNoMore,vbInliers,nInliers);
+                cv::Mat Tcw = pSolver ? pSolver->iterate(5, bNoMore, vbInliers, nInliers) : cv::Mat();
 
-                // If Ransac reachs max. iterations discard keyframe
+                // If Ransac reaches max. iterations discard keyframe
                 if(bNoMore)
                 {
-                    vbDiscarded[i]=true;
+                    vbDiscarded[i] = true;
                     nCandidates--;
                 }
 
@@ -1474,65 +1516,85 @@ namespace ORB_SLAM2
                 {
                     Tcw.copyTo(mCurrentFrame.mTcw);
 
-                    set<MapPoint*> sFound;
-
-                    const int np = vbInliers.size();
+                    std::set<MapPoint*> sFound;
+                    const int np = static_cast<int>(vbInliers.size());
 
                     for(int j=0; j<np; j++)
                     {
                         if(vbInliers[j])
                         {
-                            if((j)>=0 && (j)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[j] =vvpMapPointMatches[i][j];
+                            if(j>=0 && j<mCurrentFrame.N)
+                                mCurrentFrame.mvpMapPoints[j] = vvpMapPointMatches[i][j];
                             sFound.insert(vvpMapPointMatches[i][j]);
                         }
                         else
-                            if((j)>=0 && (j)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[j] =NULL;
+                        {
+                            if(j>=0 && j<mCurrentFrame.N)
+                                mCurrentFrame.mvpMapPoints[j] = nullptr;
+                        }
                     }
 
                     int nGood = Optimizer::PoseOptimization(&mCurrentFrame);
+                    DBG("Reloc","KF#" << vpCandidateKFs[i]->mnId << " PoseOptimization nGood=" << nGood);
 
-                    if(nGood<10)
+                    if(nGood < kMinPnP)
                         continue;
 
-                    for(int io =0; io<mCurrentFrame.N; io++)
+                    bestInliers = std::max(bestInliers, nGood);
+
+                    for(int io=0; io<mCurrentFrame.N; io++)
+                    {
                         if(mCurrentFrame.mvbOutlier[io])
-                            if((io)>=0 && (io)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[io] =static_cast<MapPoint*>(NULL);
+                        {
+                            if(io>=0 && io<mCurrentFrame.N)
+                                mCurrentFrame.mvpMapPoints[io] = nullptr;
+                        }
+                    }
 
                     // If few inliers, search by projection in a coarse window and optimize again
-                    if(nGood<50)
+                    if(nGood < kMinAccept)
                     {
-                        int nadditional =matcher2.SearchByProjection(mCurrentFrame,vpCandidateKFs[i],sFound,10,100);
+                        int nadditional = matcher2.SearchByProjection(mCurrentFrame, vpCandidateKFs[i], sFound, kProjTopUpCoarse, 100);
+                        DBG("Reloc","Top-up coarse added=" << nadditional);
 
-                        if(nadditional+nGood>=50)
+                        if(nadditional + nGood >= kMinAccept)
                         {
                             nGood = Optimizer::PoseOptimization(&mCurrentFrame);
+                            DBG("Reloc","After coarse top-up nGood=" << nGood);
 
                             // If many inliers but still not enough, search by projection again in a narrower window
                             // the camera has been already optimized with many points
-                            if(nGood>30 && nGood<50)
+                            if(nGood > std::max(20, kMinAccept/2) && nGood < kMinAccept)
                             {
                                 sFound.clear();
-                                for(int ip =0; ip<mCurrentFrame.N; ip++)
+                                for(int ip=0; ip<mCurrentFrame.N; ip++)
                                     if(mCurrentFrame.mvpMapPoints[ip])
                                         sFound.insert(mCurrentFrame.mvpMapPoints[ip]);
-                                nadditional =matcher2.SearchByProjection(mCurrentFrame,vpCandidateKFs[i],sFound,3,64);
+
+                                nadditional = matcher2.SearchByProjection(mCurrentFrame, vpCandidateKFs[i], sFound, kProjTopUpFine, 64);
+                                DBG("Reloc","Top-up fine added=" << nadditional);
 
                                 // Final optimization
-                                if(nGood+nadditional>=50)
+                                if(nGood + nadditional >= kMinAccept)
                                 {
                                     nGood = Optimizer::PoseOptimization(&mCurrentFrame);
+                                    DBG("Reloc","Final nGood=" << nGood);
 
-                                    for(int io =0; io<mCurrentFrame.N; io++)
+                                    for(int io=0; io<mCurrentFrame.N; io++)
+                                    {
                                         if(mCurrentFrame.mvbOutlier[io])
-                                            if((io)>=0 && (io)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[io] =NULL;
+                                        {
+                                            if(io>=0 && io<mCurrentFrame.N)
+                                                mCurrentFrame.mvpMapPoints[io] = nullptr;
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
 
-
                     // If the pose is supported by enough inliers stop ransacs and continue
-                    if(nGood>=50)
+                    if(nGood >= kMinAccept)
                     {
                         bMatch = true;
                         break;
@@ -1543,44 +1605,54 @@ namespace ORB_SLAM2
 
         if(!bMatch)
         {
+            DBG("Reloc","Failed; bestInliers=" << bestInliers
+                << " (need >= " << kMinAccept << "; frame N=" << N << ")");
             return false;
         }
         else
         {
             mnLastRelocFrameId = mCurrentFrame.mnId;
+            DBG("Reloc","Succeeded at frame " << mnLastRelocFrameId );
             return true;
         }
-
     }
 
 
     void Tracking::Reset()
     {
 
+        DBG("Reset","System Resetting...");
         cout << "System Reseting" << endl;
         if(mpViewer)
         {
+            DBG("Reset","Stopping Viewer...");
             mpViewer->RequestStop();
             while(!mpViewer->isStopped())
                 usleep(3000);
         }
 
         // CARV: Reset Modeling
-        cout << "Reseting Modeler...";
+        cout << "Reseting Modeler...";        DBG("Reset","Resetting Modeler...");
+
         mpModeler->RequestReset();
+        DBG("Reset","Modeler reset done");
         cout << " done" << endl;
 
         // Stop Loop Closing to avoid DB writes during reset
-        cout << "Stopping Loop Closing...";
+        cout << "Stopping Loop Closing...";        DBG("Reset","Stopping Loop Closing...");
+
         mpLoopClosing->RequestStop();
         while(!mpLoopClosing->isStopped())
             usleep(1000);
+        DBG("Reset","Loop Closing stopped");
         cout << " done" << endl;
 
         // Clear BoW Database
-        cout << "Reseting Database...";
+        cout << "Reseting Database...";        DBG("Reset","Resetting DB...");
+
         mpKeyFrameDB->clear();
 
+        DBG("Reset","DB reset done");
         // Allow Loop Closing to resume after DB reset
         if(mpLoopClosing && mpLoopClosing->isStopped()) mpLoopClosing->Release();
 
@@ -1590,14 +1662,18 @@ namespace ORB_SLAM2
         if(mpLocalMapper)
         {
             mpLocalMapper->RequestStop();
+            DBG("Reset","Stopping Local Mapping...");
             while(!mpLocalMapper->isStopped())
                 usleep(1000);
+            DBG("Reset","Local Mapping stopped");
         }
 
         // Clear Map (this erase MapPoints and KeyFrames)
-        cout << "Reseting Map...";
+        cout << "Reseting Map...";        DBG("Reset","Clearing Map...");
+
         mpMap->clear();
 
+        DBG("Reset","Map cleared");
         // Allow Local Mapping to resume after destructive phase
         if(mpLocalMapper && mpLocalMapper->isStopped()) mpLocalMapper->Release();
 
@@ -1621,6 +1697,7 @@ namespace ORB_SLAM2
 
         if(mpViewer)
             mpViewer->Release();
+        DBG("Reset","Reset complete; state=NO_IMAGES_YET");
     }
 
     void Tracking::ChangeCalibration(const string &strSettingPath)
