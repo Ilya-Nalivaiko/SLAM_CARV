@@ -286,6 +286,7 @@ namespace ORB_SLAM2
             }
             else
             {
+                Map::ReadGuard rg(mpMap);
                 const float medianDepthKF2 = pKF2->ComputeSceneMedianDepth(2);
                 const float ratioBaselineDepth = baseline/medianDepthKF2;
 

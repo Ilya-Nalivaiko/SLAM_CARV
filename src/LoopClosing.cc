@@ -437,22 +437,29 @@ void LoopClosing::CorrectLoop()
 
     // Wait until Local Mapping has effectively stopped
     while (!mpLocalMapper->isStopped())
+    {
         usleep(1000);
+    }
 
-    // Ensure current KF is updated
-    mpCurrentKF->UpdateConnections();
-
-    // Connected KFs (current + covisibles)
-    mvpCurrentConnectedKFs = mpCurrentKF->GetVectorCovisibleKeyFrames();
-    mvpCurrentConnectedKFs.push_back(mpCurrentKF);
-
-    // Sim3 containers
+    // update under read guard
+    cv::Mat Twc_cur;
     KeyFrameAndPose CorrectedSim3, NonCorrectedSim3;
-    CorrectedSim3[mpCurrentKF] = mg2oScw;
+    {
+        Map::ReadGuard rg(mpMap);
 
-    // Twc(current) for Tic = Tiw * Twc
-    const cv::Mat Twc_cur = mpCurrentKF->GetPoseInverse();
+        // Ensure current KF is updated
+        mpCurrentKF->UpdateConnections();
 
+        // Connected KFs (current + covisibles)
+        mvpCurrentConnectedKFs = mpCurrentKF->GetVectorCovisibleKeyFrames();
+        mvpCurrentConnectedKFs.push_back(mpCurrentKF);
+
+        // Sim3 containers
+        CorrectedSim3[mpCurrentKF] = mg2oScw;
+
+        // Twc(current) for Tic = Tiw * Twc
+        Twc_cur = mpCurrentKF->GetPoseInverse();
+    }
     // ===== PURE COMPUTATION (no map writes) =====
 
     // Fill CorrectedSim3 / NonCorrectedSim3 (read-only per-KF math)
@@ -563,9 +570,12 @@ void LoopClosing::CorrectLoop()
         KeyFrame* pKFi = *vit;
         vector<KeyFrame*> vpPreviousNeighbors = pKFi->GetVectorCovisibleKeyFrames();
 
-        // After corrections & fusion, UpdateConnections then subtract previous neighbors and connected set
-        pKFi->UpdateConnections();
-        LoopConnections[pKFi] = pKFi->GetConnectedKeyFrames();
+        {
+            Map::ReadGuard rg(mpMap);
+            // After corrections & fusion, UpdateConnections then subtract previous neighbors and connected set
+            pKFi->UpdateConnections();
+            LoopConnections[pKFi] = pKFi->GetConnectedKeyFrames();
+        }
 
         for (vector<KeyFrame*>::iterator vit_prev = vpPreviousNeighbors.begin(), vend_prev = vpPreviousNeighbors.end(); vit_prev != vend_prev; vit_prev++)
             LoopConnections[pKFi].erase(*vit_prev);
