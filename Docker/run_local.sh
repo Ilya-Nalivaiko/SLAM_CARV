@@ -5,7 +5,7 @@ docker run \
   -p 8080:8080 \
   --tmpfs /tmp:rw,size=100m \
   --tmpfs /root/.vnc \
-  -v ~/SLAM_CARV/shared:/root/orbslam3/SLAM_CARV/shared \
+  -v ~/Documents/GitHub/SLAM_CARV/shared:/root/orbslam3/SLAM_CARV/shared \
   --rm -it \
   --privileged \
   -e DISPLAY=:1 \

@@ -318,24 +318,17 @@ namespace ORB_SLAM2
 
         mLastProcessedState=mState;
 
-        // Get Map Mutex -> Map cannot be changed
-        unique_lock<shared_mutex> lock(mpMap->mMutexMapUpdate, std::defer_lock);
-
         if(mState==NOT_INITIALIZED)
         {
             if(mSensor==System::STEREO || mSensor==System::RGBD)
             {
-                lock.lock();
                 StereoInitialization();
-                lock.unlock();
             }
             else
             {
-                lock.lock();
                 DBG("Init","Begin MonocularInitialization()");
                 MonocularInitialization();
                 DBG("Init","End MonocularInitialization(), state=" << mState);
-                lock.unlock();
             }
  
             mpFrameDrawer->Update(this);
@@ -514,9 +507,7 @@ namespace ORB_SLAM2
                 // Check if we need to insert a new keyframe
                 if(NeedNewKeyFrame())
                 {
-                    lock.lock();
                     CreateNewKeyFrame();
-                    lock.unlock();
                 }
 
                 // We allow points with high innovation (considererd outliers by the Huber Function)
@@ -1144,6 +1135,8 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
         if(!mpLocalMapper->SetNotStop(true))
             return;
 
+        Map::ReadGuard rg(mpMap);
+
         KeyFrame* pKF = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
 
         mpReferenceKF = pKF;
@@ -1450,12 +1443,13 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
         vector<vector<MapPoint*>> vvpMapPointMatches(nKFs);
         vector<bool> vbDiscarded(nKFs, false);
 
-        // Adaptive acceptance thresholds based on the number of features in the frame
+        // TODO try again with adaptive acceptance thresholds based on the number of features in the frame
+        // but actually add limits so it doesnt try to get like 200
         const int N = std::max(1, mCurrentFrame.N);
-        const int kMinAccept = std::max(30, N/4);   // accept if >= 25% of features or at least 30
-        const int kMinPnP    = std::max(10, N/10);  // early cut: at least 10% or 10
-        const int kProjTopUpCoarse = 12;            // projection top-up coarse window (pixels)
-        const int kProjTopUpFine   = 5;             // projection top-up fine window (pixels)
+        const int kMinAccept       = 50;   // accept if >= 25% of features or at least 30
+        const int kMinPnP          = 30;  // early cut: at least 10% or 10
+        const int kProjTopUpCoarse = 8;            // projection top-up coarse window (pixels)
+        const int kProjTopUpFine   = 4;             // projection top-up fine window (pixels)
 
         int nCandidates = 0;
 

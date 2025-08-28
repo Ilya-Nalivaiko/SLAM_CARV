@@ -187,15 +187,21 @@ int ORBmatcher::SearchByBoW(KeyFrame* pKF,Frame &F, vector<MapPoint*> &vpMapPoin
             for(size_t iKF=0; iKF<vIndicesKF.size(); iKF++)
             {
                 const unsigned int realIdxKF = vIndicesKF[iKF];
+                if (realIdxKF >= vpMapPointsKF.size() ||
+                    realIdxKF >= (size_t)pKF->mDescriptors.rows ||
+                    realIdxKF >= pKF->mvKeysUn.size()) {
+                    std::cerr << "[SearchByBoW] realIdxKF invalid" << std::endl;
+                    continue;
+                }
 
                 MapPoint* pMP = vpMapPointsKF[realIdxKF];
 
-                if(!pMP)
+                if(!pMP || pMP->isBad()) continue;     
+
+                if (pKF->mDescriptors.empty()) {
+                    std::cerr << "[SearchByBoW] pKF->mDescriptors empty invalid" << std::endl;
                     continue;
-
-                if(pMP->isBad())
-                    continue;                
-
+                }
                 const cv::Mat &dKF= pKF->mDescriptors.row(realIdxKF);
 
                 int bestDist1=256;
@@ -206,9 +212,20 @@ int ORBmatcher::SearchByBoW(KeyFrame* pKF,Frame &F, vector<MapPoint*> &vpMapPoin
                 {
                     const unsigned int realIdxF = vIndicesF[iF];
 
+                    if (realIdxF >= vpMapPointMatches.size() ||
+                        realIdxF >= (size_t)F.mDescriptors.rows ||
+                        realIdxF >= F.mvKeys.size()) {
+                        std::cerr << "[SearchByBoW] realIdxF invalid" << std::endl;
+                        continue;
+                    }
+
                     if(vpMapPointMatches[realIdxF])
                         continue;
 
+                    if (F.mDescriptors.empty()) {
+                        std::cerr << "[SearchByBoW] F.mDescriptors empty invalid" << std::endl;
+                        continue;
+                    }
                     const cv::Mat &dF = F.mDescriptors.row(realIdxF);
 
                     const int dist =  DescriptorDistance(dKF,dF);

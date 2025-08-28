@@ -305,8 +305,7 @@ namespace ORB_SLAM2
         // === Phase 1: read/count (no KF connection locks, no cross-object calls) ===
         std::map<KeyFrame*, int> KFcounter;
         {
-            // do NOT use a read guard here, if needed the outer scope should have one
-            //Map::ReadGuard rg(mpMap);
+            Map::ReadGuard rg(mpMap);
             
             for (auto pMP : vpMP)
             {
@@ -661,10 +660,10 @@ namespace ORB_SLAM2
     float KeyFrame::ComputeSceneMedianDepth(const int q)
     {
         vector<MapPoint*> vpMapPoints;
+        Map::ReadGuard rg(mpMap);
         cv::Mat Tcw_;
         {
             unique_lock<mutex> lock(mMutexFeatures);
-            Map::ReadGuard rg(mpMap);
             vpMapPoints = mvpMapPoints;
         }
         {
@@ -683,8 +682,27 @@ namespace ORB_SLAM2
             {
                 MapPoint* pMP = vpMapPoints[i];
                 cv::Mat x3Dw = pMP->GetWorldPos();
-                float z = Rcw2.dot(x3Dw)+zcw;
-                vDepths.push_back(z);
+                float z;
+                try {
+                    z = Rcw2.dot(x3Dw) + zcw;
+                    vDepths.push_back(z);
+                }
+                catch (const cv::Exception& e) {
+                    std::cerr << "[ComputeSceneMedianDepth] OpenCV exception: " 
+                            << e.what() << std::endl;
+                    std::cerr << "Rcw2: size=" << Rcw2.size() 
+                            << " type=" << Rcw2.type() << std::endl;
+                    std::cerr << "x3Dw: size=" << x3Dw.size() 
+                            << " type=" << x3Dw.type() << std::endl;
+                }
+                catch (const std::exception& e) {
+                    std::cerr << "[ComputeSceneMedianDepth] std::exception: " 
+                            << e.what() << std::endl;
+                }
+                catch (...) {
+                    std::cerr << "[ComputeSceneMedianDepth] Unknown exception in dot()" 
+                            << std::endl;
+                }
             }
         }
 

@@ -38,9 +38,14 @@ MapPoint::MapPoint(const cv::Mat &Pos, KeyFrame *pRefKF, Map* pMap):
     mnCorrectedReference(0), mnBAGlobalForKF(0), mpRefKF(pRefKF), mnVisible(1), mnFound(1), mbBad(false),
     mpReplaced(static_cast<MapPoint*>(NULL)), mfMinDistance(0), mfMaxDistance(0), mpMap(pMap)
 {
-    Pos.copyTo(mWorldPos);
+    if (!Pos.empty()){
+        Pos.copyTo(mWorldPos);
+    } else {
+        std::cerr << "Tried to set mWorldPos to empty matrix!" << std::endl;
+        throw new exception;
+    }
     //cout << "MapPoint mWorldPos:" << endl << " " << mWorldPos << endl << endl;
-    //cout << "MapPoint mWorldPos:" << endl << " " << mWorldPos.at<float>(0) << ";" << mWorldPos.at<float>(1) << ";" << mWorldPos.at<float>(2) << endl << endl;
+    cout << "MapPoint mWorldPos:" << endl << " " << mWorldPos.at<float>(0) << ";" << mWorldPos.at<float>(1) << ";" << mWorldPos.at<float>(2) << endl << endl;
     mNormalVector = cv::Mat::zeros(3,1,CV_32F);
 
     // MapPoints can be created from Tracking and Local Mapping. This mutex avoid conflicts with id.
@@ -54,7 +59,12 @@ MapPoint::MapPoint(const cv::Mat &Pos, Map* pMap, Frame* pFrame, const int &idxF
     mnCorrectedReference(0), mnBAGlobalForKF(0), mpRefKF(static_cast<KeyFrame*>(NULL)), mnVisible(1),
     mnFound(1), mbBad(false), mpReplaced(NULL), mpMap(pMap)
 {
-    Pos.copyTo(mWorldPos);
+    if (!Pos.empty()){
+        Pos.copyTo(mWorldPos);
+    } else {
+        std::cerr << "Tried to set mWorldPos to empty matrix!" << std::endl;
+        throw new exception;
+    }
     cv::Mat Ow = pFrame->GetCameraCenter();
     mNormalVector = mWorldPos - Ow;
     mNormalVector = mNormalVector/cv::norm(mNormalVector);
@@ -79,7 +89,12 @@ void MapPoint::SetWorldPos(const cv::Mat &Pos)
 {
     unique_lock<mutex> lock2(mGlobalMutex);
     unique_lock<mutex> lock(mMutexPos);
-    Pos.copyTo(mWorldPos);
+    if (!Pos.empty()){
+        Pos.copyTo(mWorldPos);
+    } else {
+        std::cerr << "Tried to set mWorldPos to empty matrix!" << std::endl;
+        throw new exception;
+    } 
 }
 
 cv::Mat MapPoint::GetWorldPos()
