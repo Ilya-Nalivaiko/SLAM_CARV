@@ -66,9 +66,9 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "Mono");
     ros::start();
 
-    if(argc != 8)
+    if(argc != 9)
     {
-        cerr << endl << "Usage: rosrun ORB_CARV_Pub Mono path_to_vocabulary path_to_settings own_ip http_port unity_ip unity_zmq_port image_topic" << endl;
+        cerr << endl << "Usage: rosrun ORB_CARV_Pub Mono path_to_vocabulary path_to_settings own_ip http_port unity_ip unity_zmq_port image_topic useViewer" << endl;
         ros::shutdown();
         return 1;
     }
@@ -79,6 +79,11 @@ int main(int argc, char **argv)
     int zmqPort = std::stoi(argv[6]);
     std::string imageTopic = argv[7];
 
+    int useViewer = stoi(argv[8]);
+    if (!useViewer){
+        std::cout << "Running in headless mode" << std::endl;
+    }
+
     std::string ownAddress = ownIp + ":" + std::to_string(httpPort);
     std::string unityAddress = unityIp + ":" + std::to_string(zmqPort);
 
@@ -88,7 +93,7 @@ int main(int argc, char **argv)
     server.start();
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, false);
+    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, useViewer);
 
     SLAM.SetNetworkingInfo(ownAddress, unityAddress, &cache);
 

@@ -20,4 +20,8 @@ exec setarch "$(uname -m)" -R \
     config_files/Logitech_c270_HD720p.yaml \
     192.168.1.133 8080 \
     192.168.1.133 5555 \
-    camera/image_raw
+    camera/image_raw \
+    0
+
+# 1 = use viewer
+# 0 = headless
