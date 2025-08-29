@@ -9,16 +9,6 @@ ENDIF()
 
 MESSAGE("Build type: " ${ROS_BUILD_TYPE})
 
-# ------------------------------
-# Force ThreadSanitizer build
-# ------------------------------
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -Wall -O1 -g -fsanitize=thread -fno-omit-frame-pointer -fPIC -pthread")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O1 -g -std=c++17 -fsanitize=thread -fno-omit-frame-pointer -fPIC -fPIE -pthread")
-
-# Linker flags: executables PIE, libs normal
-set(CMAKE_EXE_LINKER_FLAGS   "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread -pie -pthread -Wl,--no-undefined")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=thread -pthread")
-
 # Helpful messages for clarity
 message(STATUS "ThreadSanitizer instrumentation ENABLED")
 message(STATUS "  C flags   : ${CMAKE_C_FLAGS}")

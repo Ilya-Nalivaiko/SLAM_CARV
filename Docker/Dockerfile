@@ -145,6 +145,9 @@ FROM base AS runtime
 WORKDIR /root/orbslam3/SLAM_CARV
 COPY . /root/orbslam3/SLAM_CARV
 
+#Comment this out entirely to not use tsan
+ENV USE_TSAN=1
+
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from local source ......"
 
 RUN cd /root/orbslam3/SLAM_CARV && \
