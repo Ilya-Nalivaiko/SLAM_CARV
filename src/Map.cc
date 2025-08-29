@@ -56,13 +56,16 @@ void Map::AddMapPoint(MapPoint *pMP)
 void Map::EraseMapPoint(MapPoint *pMP)
 {
     unique_lock<mutex> lock(mMutexMap);
+    // 1) Erase from the main set of live points
     mspMapPoints.erase(pMP);
 
-    //carv: remove point in modeler
+    // 2) Purge any lingering references so viewers don’t see stale pointers
+    auto &refs = mvpReferenceMapPoints;
+    refs.erase(std::remove(refs.begin(), refs.end(), pMP), refs.end());
+    // 3) Inform the modeler; actual memory free is still deferred
     mpModeler->AddDeletePointEntry(pMP);
 
-    // TODO: This only erase the pointer.
-    // Delete the MapPoint
+    // Note: pointer will be freed later by CollectTrash() after DeferErase().
 }
 
 void Map::EraseKeyFrame(KeyFrame *pKF)
@@ -98,10 +101,62 @@ vector<KeyFrame*> Map::GetAllKeyFrames()
     return vector<KeyFrame*>(mspKeyFrames.begin(),mspKeyFrames.end());
 }
 
-// KeyFrame * Map::GetKeyFrameById(long unsigned int kf_id)
-// {
-//
-// }
+void Map::SnapshotMapPoints(std::vector<cv::Vec3f>& nonRefOut,
+                            std::vector<cv::Vec3f>& refOut)
+{
+    nonRefOut.clear();
+    refOut.clear();
+
+    // Block frees while we snapshot
+    std::shared_lock<std::shared_mutex> lkUpdate(mMutexMapUpdate);
+
+    // Copy containers under the map mutex, then release it
+    std::vector<MapPoint*> vpMPs;
+    std::vector<MapPoint*> vpRef;
+    {
+        std::unique_lock<std::mutex> lk(mMutexMap);
+        vpMPs.reserve(mspMapPoints.size());
+        for (MapPoint* pMP : mspMapPoints) vpMPs.push_back(pMP);
+        vpRef = mvpReferenceMapPoints; // may be a subset of vpMPs
+    }
+
+    // Build a set for ref filtering
+    std::unordered_set<MapPoint*> refSet(vpRef.begin(), vpRef.end());
+    nonRefOut.reserve(vpMPs.size());
+    refOut.reserve(vpRef.size());
+
+    // Snapshot non-reference points
+    for (MapPoint* mp : vpMPs)
+    {
+        if (!mp) continue;
+
+        // Feature lock read section: guards lifetime-sensitive flags
+        std::shared_lock<std::shared_mutex> lkFeat(mp->mMutexFeatures);
+        if (mp->isBad()) continue;                 // don't include bad points
+        if (refSet.find(mp) != refSet.end()) continue; // skip refs in nonRef list
+
+        // Pose read (GetWorldPos locks internally)
+        const cv::Mat P = mp->GetWorldPos();
+        if (P.empty() || P.rows < 3) continue;
+
+        nonRefOut.emplace_back(P.at<float>(0), P.at<float>(1), P.at<float>(2));
+    }
+
+    // Snapshot reference points
+    for (MapPoint* mp : vpRef)
+    {
+        if (!mp) continue;
+
+        std::shared_lock<std::shared_mutex> lkFeat(mp->mMutexFeatures);
+        if (mp->isBad()) continue;
+
+        const cv::Mat P = mp->GetWorldPos();
+        if (P.empty() || P.rows < 3) continue;
+
+        refOut.emplace_back(P.at<float>(0), P.at<float>(1), P.at<float>(2));
+    }
+    // lkUpdate released here; we only return POD
+}
 
 std::vector<MapPoint*> Map::GetAllMapPoints()
 {
@@ -129,10 +184,17 @@ long unsigned int Map::KeyFramesInMap()
     return mspKeyFrames.size();
 }
 
-vector<MapPoint*> Map::GetReferenceMapPoints()
+// Map.cc
+std::vector<MapPoint*> Map::GetReferenceMapPoints()
 {
-    unique_lock<mutex> lock(mMutexMap);
-    return mvpReferenceMapPoints;
+    std::unique_lock<std::mutex> lock(mMutexMap);
+    std::vector<MapPoint*> out;
+    out.reserve(mvpReferenceMapPoints.size());
+    for (MapPoint* mp : mvpReferenceMapPoints) {
+        if (mp && mspMapPoints.count(mp) && !mp->isBad())
+            out.push_back(mp);
+    }
+    return out;
 }
 
 long unsigned int Map::GetMaxKFid()
@@ -150,7 +212,6 @@ void Map::clear()
 
         // 2) Do NOT delete MapPoints here. Mark them bad; deletion is deferred.
         //    This avoids racing with readers that still hold cv::Mat headers
-        //    into MapPoint data (the cv::Mat::release() crash you saw).
         for (MapPoint* pMP : mspMapPoints)
         {
             if (pMP) pMP->SetBadFlag();  // queues into mTrash via DeferErase()
@@ -180,6 +241,9 @@ void Map::DeferErase(MapPoint* pMP)
     // pMP is already detached & marked bad by SetBadFlag()/Replace()
     std::lock_guard<std::mutex> lk(mMutexTrash);
     mTrash.push_back(pMP);
+    EraseMapPoint(pMP); //this does NOT free memory, just prevents the point from being sent out anymore
+
+    //Ensure points that are marked bad are actually erased (with this function) eventually. currently this is done in setbadflag and replace
 }
 
 void Map::CollectTrash()

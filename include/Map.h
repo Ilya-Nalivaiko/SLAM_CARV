@@ -28,6 +28,9 @@
 #include <list>
 #include <mutex>
 #include <shared_mutex>
+#include <memory>
+#include <vector>
+#include <opencv2/core/matx.hpp>   // cv::Vec3f
 
 #include <iostream>
 
@@ -72,6 +75,10 @@ namespace ORB_SLAM2 {
 
         std::vector<MapPoint *> GetReferenceMapPoints();
 
+        // NEW: lifetime-safe snapshot for rendering (no raw pointers in the viewer)
+        void SnapshotMapPoints(std::vector<cv::Vec3f>& nonRefOut,
+                               std::vector<cv::Vec3f>& refOut);
+
         long unsigned int MapPointsInMap();
 
         long unsigned KeyFramesInMap();
@@ -84,6 +91,7 @@ namespace ORB_SLAM2 {
 
         vector<KeyFrame *> mvpKeyFrameOrigins;
 
+        // Blocks CollectTrash() (unique) vs readers (shared)
         mutable std::shared_mutex mMutexMapUpdate;
         struct ReadGuard {
             std::shared_lock<std::shared_mutex> lk;

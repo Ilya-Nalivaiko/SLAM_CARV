@@ -208,7 +208,7 @@ void MapPoint::Replace(MapPoint* pMP)
 
     {
         std::unique_lock<std::shared_mutex> lock1(mMutexFeatures); // WRITE lock
-        std::unique_lock<std::mutex>        lock2(mMutexPos);
+        //std::unique_lock<std::mutex>        lock2(mMutexPos);
 
         obs        = mObservations;
         mObservations.clear();

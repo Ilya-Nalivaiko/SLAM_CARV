@@ -43,41 +43,26 @@ MapDrawer::MapDrawer(Map* pMap, const string &strSettingPath):mpMap(pMap)
 
 void MapDrawer::DrawMapPoints()
 {
-    vector<MapPoint*> vpMPs = mpMap->GetAllMapPoints();
-    vector<MapPoint*> vpRefMPs = mpMap->GetReferenceMapPoints();
+    // Snapshot once; no raw pointers leave Map
+    std::vector<cv::Vec3f> nonRefPos;
+    std::vector<cv::Vec3f> refPos;
+    mpMap->SnapshotMapPoints(nonRefPos, refPos);
 
-    set<MapPoint*> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
-
-    if(vpMPs.empty())
-        return;
-
-    glPointSize(mPointSize);
-    glBegin(GL_POINTS);
-    glColor3f(0.0,0.0,0.0);
-
-    for(size_t i=0, iend=vpMPs.size(); i<iend;i++)
-    {
-        if(vpMPs[i]->isBad() || spRefMPs.count(vpMPs[i]))
-            continue;
-        cv::Mat pos = vpMPs[i]->GetWorldPos();
-        glVertex3f(pos.at<float>(0),pos.at<float>(1),pos.at<float>(2));
-    }
-    glEnd();
-
-    glPointSize(mPointSize);
-    glBegin(GL_POINTS);
-    glColor3f(1.0,0.0,0.0);
-
-    for(set<MapPoint*>::iterator sit=spRefMPs.begin(), send=spRefMPs.end(); sit!=send; sit++)
-    {
-        if((*sit)->isBad())
-            continue;
-        cv::Mat pos = (*sit)->GetWorldPos();
-        glVertex3f(pos.at<float>(0),pos.at<float>(1),pos.at<float>(2));
-
+    if (!nonRefPos.empty()){
+        glPointSize(mPointSize);
+        glBegin(GL_POINTS);
+        glColor3f(0.0f, 0.0f, 0.0f);                // non-ref = black
+        for (const auto& v : nonRefPos) glVertex3f(v[0], v[1], v[2]);
+        glEnd();
     }
 
-    glEnd();
+    if (!refPos.empty()){
+        glPointSize(mPointSize);
+        glBegin(GL_POINTS);
+        glColor3f(1.0f, 0.0f, 0.0f);                // ref = red
+        for (const auto& v : refPos) glVertex3f(v[0], v[1], v[2]);
+        glEnd();
+    }
 }
 
 void MapDrawer::DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph)
