@@ -116,6 +116,20 @@ public:
     std::shared_mutex mMutexFeatures;
     std::mutex mMutexPos;
 
+    //Keep track of what is using this map point because we really do not want to delete one while its in use
+    std::atomic<uint32_t> mPins{0};
+    struct Pin {
+        MapPoint* p{nullptr};
+        explicit Pin(MapPoint* mp) : p(mp) {
+            if (p) p->mPins.fetch_add(1, std::memory_order_acq_rel);
+        }
+        Pin(const Pin&) = delete;
+        Pin& operator=(const Pin&) = delete;
+        ~Pin() {
+            if (p) p->mPins.fetch_sub(1, std::memory_order_acq_rel);
+        }
+    };
+
 protected:    
 
      // Position in absolute coordinates

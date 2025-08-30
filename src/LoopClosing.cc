@@ -722,7 +722,9 @@ void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF)
                 mpPosUpdates.reserve(vpMPs.size());
                 for (MapPoint* pMP : vpMPs)
                 {
-                    if (!pMP || pMP->isBad()) continue;
+                    if (!pMP) continue;
+                    MapPoint::Pin guard(pMP);
+                    if (pMP->isBad()) continue;
 
                     if (pMP->mnBAGlobalForKF == nLoopKF)
                     {

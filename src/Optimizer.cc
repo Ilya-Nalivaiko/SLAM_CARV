@@ -95,8 +95,9 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
     for(size_t i=0; i<vpMP.size(); i++)
     {
         MapPoint* pMP = vpMP[i];
-        if(!pMP || pMP->isBad())
-            continue;
+        if (!pMP) continue;
+        MapPoint::Pin guard(pMP);
+        if (pMP->isBad()) continue;
         g2o::VertexSBAPointXYZ* vPoint = new g2o::VertexSBAPointXYZ();
         vPoint->setEstimate(Converter::toVector3d(pMP->GetWorldPos()));
         const int id = pMP->mnId+maxKFid+1;
@@ -253,8 +254,9 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
 
         MapPoint* pMP = vpMP[i];
 
-        if(!pMP || pMP->isBad())
-            continue;
+        if (!pMP) continue;
+        MapPoint::Pin guard(pMP);
+        if (pMP->isBad()) continue;
 
         // SAFETY: vertex may not exist if we removed it
         g2o::VertexSBAPointXYZ* vPoint =
@@ -1096,8 +1098,9 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
     {
         MapPoint* pMP = vpMPs[i];
 
-        if(pMP->isBad())
-            continue;
+        if (!pMP) continue;
+        MapPoint::Pin guard(pMP);
+        if (pMP->isBad()) continue;
 
         int nIDr;
         if(pMP->mnCorrectedByKF==pCurKF->mnId)

@@ -24,6 +24,7 @@
 #include "Modeler/Modeler.h"
 
 #include<mutex>
+#include <thread>
 
 namespace ORB_SLAM2
 {
@@ -80,7 +81,11 @@ void Map::EraseKeyFrame(KeyFrame *pKF)
 void Map::SetReferenceMapPoints(const vector<MapPoint *> &vpMPs)
 {
     unique_lock<mutex> lock(mMutexMap);
-    mvpReferenceMapPoints = vpMPs;
+    mvpReferenceMapPoints.clear();
+    for (MapPoint* p : vpMPs) {
+        if (p && mspMapPoints.count(p) && !p->isBad())
+            mvpReferenceMapPoints.push_back(p);
+    }
 }
 
 void Map::InformNewBigChange()
@@ -116,7 +121,10 @@ void Map::SnapshotMapPoints(std::vector<cv::Vec3f>& nonRefOut,
     {
         std::unique_lock<std::mutex> lk(mMutexMap);
         vpMPs.reserve(mspMapPoints.size());
-        for (MapPoint* pMP : mspMapPoints) vpMPs.push_back(pMP);
+        for (MapPoint* pMP : mspMapPoints) {
+            if (pMP && mspMapPoints.count(pMP)) //guard against stale reference points
+                vpMPs.push_back(pMP);
+        };
         vpRef = mvpReferenceMapPoints; // may be a subset of vpMPs
     }
 
@@ -129,6 +137,7 @@ void Map::SnapshotMapPoints(std::vector<cv::Vec3f>& nonRefOut,
     for (MapPoint* mp : vpMPs)
     {
         if (!mp) continue;
+        MapPoint::Pin guard(mp);  // NEW: pins lifetime
 
         // Feature lock read section: guards lifetime-sensitive flags
         std::shared_lock<std::shared_mutex> lkFeat(mp->mMutexFeatures);
@@ -146,9 +155,12 @@ void Map::SnapshotMapPoints(std::vector<cv::Vec3f>& nonRefOut,
     for (MapPoint* mp : vpRef)
     {
         if (!mp) continue;
+        MapPoint::Pin guard(mp);  // NEW: pins lifetime
 
         std::shared_lock<std::shared_mutex> lkFeat(mp->mMutexFeatures);
-        if (mp->isBad()) continue;
+
+        std::unique_lock<std::mutex> lk(mMutexMap);
+        if (!mspMapPoints.count(mp) || mp->isBad()) continue;
 
         const cv::Mat P = mp->GetWorldPos();
         if (P.empty() || P.rows < 3) continue;
@@ -259,6 +271,9 @@ void Map::CollectTrash()
     // Now nobody else should hold references (Tracking is locked out and
     // LocalMapping already removed observations)
     for (MapPoint* p : to_delete) {
+        while (p->mPins.load(std::memory_order_acquire) != 0) {
+            std::this_thread::yield();
+        }
         delete p;
     }
 }
