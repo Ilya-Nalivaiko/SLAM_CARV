@@ -37,6 +37,7 @@
 #include<iostream>
 
 #include<mutex>
+#include <memory>
 
 
 using namespace std;
@@ -580,10 +581,10 @@ namespace ORB_SLAM2
                 {
                     cv::Mat x3D = mCurrentFrame.UnprojectStereo(i);
                     MapPoint* pNewMP = new MapPoint(x3D,pKFini,mpMap);
-                    pNewMP->AddObservation(pKFini,i);
-                    pKFini->AddMapPoint(pNewMP,i);
                     pNewMP->ComputeDistinctiveDescriptors();
                     pNewMP->UpdateNormalAndDepth();
+                    pNewMP->AddObservation(pKFini,i);
+                    pKFini->AddMapPoint(pNewMP,i);
                     mpMap->AddMapPoint(pNewMP);
 
                     if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =pNewMP;
@@ -720,11 +721,11 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
             pKFini->AddMapPoint(pMP,i);
             pKFcur->AddMapPoint(pMP,mvIniMatches[i]);
 
-            pMP->AddObservation(pKFini,i);
-            pMP->AddObservation(pKFcur,mvIniMatches[i]);
-
             pMP->ComputeDistinctiveDescriptors();
             pMP->UpdateNormalAndDepth();
+
+            pMP->AddObservation(pKFini,i);
+            pMP->AddObservation(pKFcur,mvIniMatches[i]);
 
             //Fill Current Frame structure
             mCurrentFrame.mvpMapPoints[mvIniMatches[i]] = pMP;
@@ -836,24 +837,34 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
 
         Optimizer::PoseOptimization(&mCurrentFrame);
 
-        // Discard outliers
+        // Discard outliers (protect from concurrent deletion)
         int nmatchesMap = 0;
-        for(int i =0; i<mCurrentFrame.N; i++)
         {
-            if(mCurrentFrame.mvpMapPoints[i])
+            Map::ReadGuard rg(mpMap);
+            for (int i = 0; i < mCurrentFrame.N; i++)
             {
-                if(mCurrentFrame.mvbOutlier[i])
-                {
-                    MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
+                MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
+                if (!pMP) continue;
 
-                    if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =static_cast<MapPoint*>(NULL);
-                    mCurrentFrame.mvbOutlier[i]=false;
-                    pMP->mbTrackInView = false;
+                // If point turned bad while we were working, drop it.
+                if (pMP->isBad())
+                {
+                    if ((i) >= 0 && (i) < mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
+                    continue;
+                }
+
+                if (mCurrentFrame.mvbOutlier[i])
+                {
+                    if ((i) >= 0 && (i) < mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
+                    mCurrentFrame.mvbOutlier[i] = false;
+                    pMP->mbTrackInView = false;                 // lightweight flags; guarded from free by ReadGuard
                     pMP->mnLastFrameSeen = mCurrentFrame.mnId;
                     nmatches--;
                 }
-                else if(mCurrentFrame.mvpMapPoints[i]->Observations()>0)
+                else if (pMP->Observations() > 0)
+                {
                     nmatchesMap++;
+                }
             }
         }
 
@@ -950,14 +961,20 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
             th=15;
         else
             th=7;
-        int nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,th,mSensor==System::MONOCULAR);
 
-        // If few matches, uses a wider window search
-        if(nmatches<20)
+        int nmatches;
         {
-            fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
-            nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,2*th,mSensor==System::MONOCULAR);
+            Map::ReadGuard rg(mpMap);
+            nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,th,mSensor==System::MONOCULAR);
+
+            // If few matches, uses a wider window search
+            if(nmatches<20)
+            {
+                fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
+                nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,2*th,mSensor==System::MONOCULAR);
+            }
         }
+        
 
         if(nmatches<20)
             return false;
@@ -965,24 +982,34 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
         // Optimize frame pose with all matches
         Optimizer::PoseOptimization(&mCurrentFrame);
 
-        // Discard outliers
+        // Discard outliers (protect from concurrent deletion)
         int nmatchesMap = 0;
-        for(int i =0; i<mCurrentFrame.N; i++)
         {
-            if(mCurrentFrame.mvpMapPoints[i])
+            Map::ReadGuard rg(mpMap);
+            for (int i = 0; i < mCurrentFrame.N; i++)
             {
-                if(mCurrentFrame.mvbOutlier[i])
-                {
-                    MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
+                MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
+                if (!pMP) continue;
 
-                    if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =static_cast<MapPoint*>(NULL);
-                    mCurrentFrame.mvbOutlier[i]=false;
-                    pMP->mbTrackInView = false;
+                // Drop if it became bad
+                if (pMP->isBad())
+                {
+                    if ((i) >= 0 && (i) < mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
+                    continue;
+                }
+
+                if (mCurrentFrame.mvbOutlier[i])
+                {
+                    if ((i) >= 0 && (i) < mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
+                    mCurrentFrame.mvbOutlier[i] = false;
+                    pMP->mbTrackInView = false;                 // lightweight flags; guarded from free by ReadGuard
                     pMP->mnLastFrameSeen = mCurrentFrame.mnId;
                     nmatches--;
                 }
-                else if(mCurrentFrame.mvpMapPoints[i]->Observations()>0)
+                else if (pMP->Observations() > 0)
+                {
                     nmatchesMap++;
+                }
             }
         }
 
@@ -1184,10 +1211,10 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
                     {
                         cv::Mat x3D = mCurrentFrame.UnprojectStereo(i);
                         MapPoint* pNewMP = new MapPoint(x3D,pKF,mpMap);
-                        pNewMP->AddObservation(pKF,i);
-                        pKF->AddMapPoint(pNewMP,i);
                         pNewMP->ComputeDistinctiveDescriptors();
                         pNewMP->UpdateNormalAndDepth();
+                        pNewMP->AddObservation(pKF,i);
+                        pKF->AddMapPoint(pNewMP,i);
                         mpMap->AddMapPoint(pNewMP);
 
                         if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =pNewMP;
@@ -1416,11 +1443,18 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
         }
     }
 
+    //Helper for stopping map points from getting deleted while things are being done
+    struct PinBag {
+        std::vector<std::unique_ptr<MapPoint::Pin>> pins;
+        void add(MapPoint* mp) { pins.emplace_back(std::make_unique<MapPoint::Pin>(mp)); }
+    };
+
     bool Tracking::Relocalization()
     {
         DBG("Reloc","Begin; computing BoW + candidates...");
-        // SAFETY: protect from concurrent access
+        // SAFETY: protect from concurrent access and fres
         std::lock_guard<std::mutex> lk(g_trackMutex);
+        std::shared_lock<std::shared_mutex> lkMap(mpMap->mMutexMapUpdate);
 
         // Compute Bag of Words Vector
         mCurrentFrame.ComputeBoW();
@@ -1440,6 +1474,7 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
         ORBmatcher matcher(0.75,true);
 
         vector<PnPsolver*> vpPnPsolvers(nKFs, static_cast<PnPsolver*>(nullptr));
+        std::vector<PinBag> vPins(nKFs); // pin used points
         vector<vector<MapPoint*>> vvpMapPointMatches(nKFs);
         vector<bool> vbDiscarded(nKFs, false);
 
@@ -1463,6 +1498,43 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
             }
 
             int nmatches = matcher.SearchByBoW(pKF, mCurrentFrame, vvpMapPointMatches[i]);
+
+            auto &raw = vvpMapPointMatches[i];
+
+            // 1) prune & pin
+            PinBag pins;
+            std::vector<MapPoint*> matchesPruned(raw.size(), nullptr);
+            matchesPruned.shrink_to_fit(); // stay same size for index alignment
+            for (size_t j = 0; j < raw.size(); ++j) {
+                MapPoint* mp = raw[j];
+                if (!mp) continue;
+
+                // pin *before* touching feature flags
+                pins.add(mp);
+
+                // cheap sanity under per-point feature lock
+                std::shared_lock<std::shared_mutex> lkFeat(mp->mMutexFeatures);
+                if (mp->isBad()) continue;                   // drop bad/replaced
+                matchesPruned[j] = mp;
+            }
+
+            // 2) build a read-only cache of 3D positions for the solver constructor
+            std::vector<cv::Point3f> xyz(matchesPruned.size(), cv::Point3f());
+            for (size_t j = 0; j < matchesPruned.size(); ++j) {
+                MapPoint* mp = matchesPruned[j];
+                if (!mp) continue;
+                const cv::Mat P = mp->GetWorldPos();         // uses its own mutex
+                if (P.empty() || P.rows < 3) { matchesPruned[j] = nullptr; continue; }
+                xyz[j] = cv::Point3f(P.at<float>(0), P.at<float>(1), P.at<float>(2));
+            }
+
+            // 3) swap back the pruned list so indices stay aligned everywhere
+            raw.swap(matchesPruned);
+
+            // 4) stash the pin bag so it outlives the candidate’s inner loops
+            // (declare alongside vpPnPsolvers)
+            static_assert(std::is_move_constructible<PinBag>::value, "PinBag must be movable");
+
             DBG("Reloc","KF#" << pKF->mnId << " BoW nmatches=" << nmatches);
 
             if(nmatches < 15)
@@ -1471,9 +1543,10 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
                 continue;
             }
 
-            PnPsolver* pSolver = new PnPsolver(mCurrentFrame, vvpMapPointMatches[i]);
+            PnPsolver* pSolver = new PnPsolver(mCurrentFrame, raw);
             pSolver->SetRansacParameters(0.99, 10, 300, 4, 0.5, 5.991);
             vpPnPsolvers[i] = pSolver;
+            vPins[i] = std::move(pins);
             nCandidates++;
         }
 
@@ -1503,6 +1576,7 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
                 {
                     vbDiscarded[i] = true;
                     nCandidates--;
+                    vPins[i] = PinBag{}; // dont want these anymore
                 }
 
                 // If a Camera Pose is computed, optimize
@@ -1515,11 +1589,15 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
 
                     for(int j=0; j<np; j++)
                     {
-                        if(vbInliers[j])
-                        {
-                            if(j>=0 && j<mCurrentFrame.N)
-                                mCurrentFrame.mvpMapPoints[j] = vvpMapPointMatches[i][j];
-                            sFound.insert(vvpMapPointMatches[i][j]);
+                        if (vbInliers[j]) {
+                            if (j>=0 && j<mCurrentFrame.N) {
+                                MapPoint* mp = vvpMapPointMatches[i][j];
+                                // (mp is pinned via vPins[i])
+                                // just in case, cheap check before using it again
+                                if (mp && !mp->isBad()) mCurrentFrame.mvpMapPoints[j] = mp;
+                                else mCurrentFrame.mvpMapPoints[j] = nullptr;
+                            }
+                            sFound.insert(vvpMapPointMatches[i][j]);  // use the same guarded mp
                         }
                         else
                         {

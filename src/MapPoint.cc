@@ -99,6 +99,12 @@ void MapPoint::SetWorldPos(const cv::Mat &Pos)
 
 cv::Mat MapPoint::GetWorldPos()
 {
+    // If this point is already marked bad (scheduled for deletion),
+    // avoid touching its internal mutex and return empty.
+    if (isBad())
+    {
+        return cv::Mat();
+    }
     unique_lock<mutex> lock(mMutexPos);
     return mWorldPos.clone();
 }

@@ -464,20 +464,21 @@ namespace ORB_SLAM2
                 if(ratioDist*ratioFactor<ratioOctave || ratioDist>ratioOctave*ratioFactor)
                     continue;
 
-                // Triangulation is succesfull
+                // Triangulation is succesfull, create new point SAFELY
+                Map::ReadGuard rg(mpMap);
+
                 MapPoint* pMP = new MapPoint(x3D,mpCurrentKeyFrame,mpMap);
 
+                //Initialize map point FIRST
                 pMP->AddObservation(mpCurrentKeyFrame,idx1);
                 pMP->AddObservation(pKF2,idx2);
-
-                mpCurrentKeyFrame->AddMapPoint(pMP,idx1);
-                pKF2->AddMapPoint(pMP,idx2);
-
                 pMP->ComputeDistinctiveDescriptors();
-
                 pMP->UpdateNormalAndDepth();
 
+                // Add map point to lists AFTER its initialized
                 mpMap->AddMapPoint(pMP);
+                mpCurrentKeyFrame->AddMapPoint(pMP,idx1);
+                pKF2->AddMapPoint(pMP,idx2);
                 mlpRecentAddedMapPoints.push_back(pMP);
 
                 nnew++;

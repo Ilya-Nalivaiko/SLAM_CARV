@@ -5,6 +5,8 @@
 #include "Modeler/Exception.h"
 #include "Modeler/Matrix.h"
 
+#include <cmath>
+
 // Header files needed by EDLines
 #include <stdio.h>
 #include <stdlib.h>
@@ -384,13 +386,30 @@ void SFMTranscriptInterface_ORBSLAM::addBundleAdjustmentEntry(set<KeyFrame *> & 
             m_SFMTranscript.addLine("bundle {");
 
             // Log point-move entries
-            for(set<MapPoint *>::iterator it = sMapPoints.begin(); it != sMapPoints.end(); it++){
-                if(m_mMapPoint_Index.count(*it) == 0)
-                    continue;
-//                    throw dlovi::Exception("Could not compute MapPoint index: no record.");
-                nPointIndex = m_mMapPoint_Index[*it];
-                ssTmp << "move point: " << nPointIndex << ", [" << (*it)->GetWorldPos().at<float>(0) << "; " << (*it)->GetWorldPos().at<float>(1)
-                      << "; " << (*it)->GetWorldPos().at<float>(2) << "]";
+            for(MapPoint* pMP : sMapPoints){
+                if(!pMP) continue;
+                // Only log points we previously indexed
+                auto itIdx = m_mMapPoint_Index.find(pMP);
+                if(itIdx == m_mMapPoint_Index.end()) continue;
+                // Skip points that have turned bad
+                if(pMP->isBad()) continue;
+
+                // Get a safe copy of the position
+                cv::Mat pos = pMP->GetWorldPos();
+                if(pos.empty() || pos.total() < 3) continue;
+                cv::Mat pos32;
+                if(pos.type() != CV_32F) pos.convertTo(pos32, CV_32F);
+                else pos32 = pos;
+
+                // Read first 3 coordinates (supports 3x1 or 1x3, continuous)
+                float x = pos32.at<float>(0);
+                float y = pos32.at<float>(1);
+                float z = pos32.at<float>(2);
+                if(!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) continue;
+
+                nPointIndex = itIdx->second;
+                ssTmp << "move point: " << nPointIndex
+                      << ", [" << x << "; " << y << "; " << z << "]";
                 m_SFMTranscript.addLine(ssTmp.str()); ssTmp.str("");
             }
 

@@ -322,7 +322,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     for(int i=0; i<N; i++)
     {
         MapPoint* pMP = pFrame->mvpMapPoints[i];
-        if(pMP)
+        if(pMP && !pMP->isBad())
         {
             // Monocular observation
             if(pFrame->mvuRight[i]<0)
@@ -350,6 +350,16 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 e->cx = pFrame->cx;
                 e->cy = pFrame->cy;
                 cv::Mat Xw = pMP->GetWorldPos();
+                // SAFETY: MapPoint might be bad or position invalid; skip if so
+                if (Xw.empty() || (Xw.rows*Xw.cols) < 3) {
+                    delete e;
+                    pFrame->mvbOutlier[i] = true;
+                    // this point wasn't a usable correspondence after all
+                    nInitialCorrespondences--;
+                    continue;
+                }
+                if (Xw.type() != CV_32F) Xw.convertTo(Xw, CV_32F);
+                // Xw is 3x1 or 1x3; linear indexing is fine after checks
                 e->Xw[0] = Xw.at<float>(0);
                 e->Xw[1] = Xw.at<float>(1);
                 e->Xw[2] = Xw.at<float>(2);
@@ -388,6 +398,14 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 e->cy = pFrame->cy;
                 e->bf = pFrame->mbf;
                 cv::Mat Xw = pMP->GetWorldPos();
+                // SAFETY: validate 3D position before touching edge buffer
+                if (Xw.empty() || (Xw.rows*Xw.cols) < 3) {
+                    delete e;
+                    pFrame->mvbOutlier[i] = true;
+                    nInitialCorrespondences--;
+                    continue;
+                }
+                if (Xw.type() != CV_32F) Xw.convertTo(Xw, CV_32F);
                 e->Xw[0] = Xw.at<float>(0);
                 e->Xw[1] = Xw.at<float>(1);
                 e->Xw[2] = Xw.at<float>(2);
@@ -397,6 +415,10 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 vpEdgesStereo.push_back(e);
                 vnIndexEdgeStereo.push_back(i);
             }
+        }
+        else
+        {
+            if (i>=0 && i<N) pFrame->mvbOutlier[i] = true;
         }
 
     }

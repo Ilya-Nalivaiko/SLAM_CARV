@@ -406,7 +406,7 @@ void PnPsolver::choose_control_points(void)
 
   for(int i = 0; i < number_of_correspondences; i++)
     for(int j = 0; j < 3; j++)
-      PW0.at<double>(3 * i + j / 3, 3 * i + j % 3) = pws[3 * i + j] - cws[0][j];
+      PW0.at<double>(i, j) = pws[3 * i + j] - cws[0][j];
 
   PW0tPW0 = PW0.t() * PW0;
   cv::Mat dummyVt;
@@ -449,8 +449,8 @@ void PnPsolver::compute_barycentric_coordinates(void)
 void PnPsolver::fill_M(cv::Mat& M,
 		  const int row, const double * as, const double u, const double v)
 {
-  double *M1 = reinterpret_cast<double*>((M).data);
-  double * M2 = M1 + 12;
+  double *M1 = M.ptr<double>(row);
+  double * M2 = M.ptr<double>(row + 1);
 
   for(int i = 0; i < 4; i++) {
     M1[3 * i    ] = as[i] * fu;
