@@ -1675,6 +1675,15 @@ void ORBmatcher::ComputeThreeMaxima(vector<int>* histo, const int L, int &ind1, 
 // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
 int ORBmatcher::DescriptorDistance(const cv::Mat &a, const cv::Mat &b)
 {
+    if (a.empty() || b.empty() || a.cols != 32 || b.cols != 32 || a.type() != CV_8U || b.type() != CV_8U)
+    {
+        // std::cerr << "[ORBmatcher::DescriptorDistance] Invalid descriptor(s) detected. "
+        //           << "a: size=" << a.size() << " type=" << a.type()
+        //           << " b: size=" << b.size() << " type=" << b.type()
+        //           << std::endl;
+        return INT_MAX; // treat as maximum distance so it won't match
+    }
+
     const int *pa = a.ptr<int32_t>();
     const int *pb = b.ptr<int32_t>();
 
