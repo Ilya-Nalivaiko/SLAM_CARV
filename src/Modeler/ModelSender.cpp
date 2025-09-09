@@ -14,10 +14,9 @@
 namespace ORB_SLAM2
 {
     // Mirrors DrawModel, but sends it to unity instead
-    void ModelDrawer::SendModel(bool mbRGB, ChunkCache& cache, const std::string& ownAddress, const std::string& unityAddress)
+    void ModelDrawer::SendModel(bool mbRGB, ChunkCache& cache, const std::string& ownAddress, const std::string& unityAddress, int chunkId)
     {
         std::cout << "[SendModel_DEBUG] Send request recieved" << std::endl;
-        int chunkId = 1337; // Replace or generate appropriately
 
 
         // ===== get images and points from model ===== 

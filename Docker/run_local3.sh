@@ -1,12 +1,12 @@
 #!/bin/bash
 
 docker run \
-  -p 5901:5901 \
-  -p 8080:8080 \
+  -p 5903:5901 \
+  -p 8082:8082 \
   --tmpfs /tmp:rw,size=100m \
   --tmpfs /root/.vnc \
   -v ~/Documents/GitHub/SLAM_CARV/shared:/root/orbslam3/SLAM_CARV/shared \
-  --rm -it \
+  --rm -d \
   --privileged \
   -e DISPLAY=:1 \
   -e QT_X11_NO_MITSHM=1 \

@@ -22,6 +22,7 @@
 #include <pangolin/pangolin.h>
 
 #include <mutex>
+#include <random>
 
 namespace ORB_SLAM2
 {
@@ -89,7 +90,7 @@ namespace ORB_SLAM2
         pangolin::Var<bool> menuSaveCARV("menu.Save CARV",false,true);
         pangolin::Var<bool> menuReset("menu.Reset",false,false);
         pangolin::Var<bool> menuSendModel("menu.Send Model",false,false);
-        pangolin::Var<bool> menuAutoSend("menu.Auto Send",false,true);
+        pangolin::Var<bool> menuAutoSend("menu.Auto Send",true,true);
         pangolin::Var<bool> menuLocalizationMode("menu.Localization Mode",false,true);
         // Define Camera Render Object (for view / scene browsing)
         pangolin::OpenGlRenderState s_map(
@@ -123,6 +124,11 @@ namespace ORB_SLAM2
         pangolin::OpenGlMatrix projectionCamera = pangolin::ProjectionMatrix(mImageWidth,mImageHeight,mfx,mfy,mcx,mcy,0.1,1000);
         pangolin::OpenGlMatrix viewAbove = pangolin::ModelViewLookAt(mViewpointX,mViewpointY,mViewpointZ, 0,0,0,0.0,-1.0, 0.0);
         pangolin::OpenGlMatrix viewCamera = pangolin::ModelViewLookAt(0,0,0, 0,0,1, 0.0,-1.0, 0.0);
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> d(1, 100000);
+        int chunkId = d(gen);
 
         while(1)
         {
@@ -198,7 +204,7 @@ namespace ORB_SLAM2
             
             if (menuAutoSend && updated){
                 if (cachePtr) {
-                    mpModelDrawer->SendModel(true, *cachePtr, ownAddress, unityAddress);
+                    mpModelDrawer->SendModel(true, *cachePtr, ownAddress, unityAddress, chunkId);
                 } else {
                     std::cerr << "[Viewer] cachePtr not set\n";
                 }
@@ -207,7 +213,7 @@ namespace ORB_SLAM2
             if (menuSendModel)
             {
                 if (cachePtr) {
-                    mpModelDrawer->SendModel(true, *cachePtr, ownAddress, unityAddress);
+                    mpModelDrawer->SendModel(true, *cachePtr, ownAddress, unityAddress, chunkId);
                 } else {
                     std::cerr << "[Viewer] cachePtr not set\n";
                 }

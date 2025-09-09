@@ -146,19 +146,20 @@ WORKDIR /root/orbslam3/SLAM_CARV
 COPY . /root/orbslam3/SLAM_CARV
 
 #Comment this out entirely to not use tsan
-ENV USE_TSAN=1
+#ENV USE_TSAN=1
 
 RUN echo "[Dockerfile Info] Installing ORB-SLAM3 from local source ......"
 
 RUN cd /root/orbslam3/SLAM_CARV && \
 	rm -rf build && \
     chmod +x build.sh && \
-    ./build.sh && \
-    chmod +x /root/orbslam3/SLAM_CARV/run.sh /root/orbslam3/SLAM_CARV/valrun.sh /root/orbslam3/SLAM_CARV/collect_debug.sh /root/orbslam3/SLAM_CARV/btrun.sh
+    ./build.sh
+    #chmod +x /root/orbslam3/SLAM_CARV/run.sh /root/orbslam3/SLAM_CARV/valrun.sh /root/orbslam3/SLAM_CARV/collect_debug.sh /root/orbslam3/SLAM_CARV/btrun.sh
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib:$LD_LIBRARY_PATH
 
-RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh /root/orbslam3/SLAM_CARV/mp4_video.sh /root/orbslam3/SLAM_CARV/tum_video.sh
+#i cant be adding more .sh files all the time
+RUN chmod +x /root/orbslam3/SLAM_CARV/*.sh
 
 
 
