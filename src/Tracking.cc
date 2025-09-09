@@ -1735,8 +1735,13 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
         {
             mpLocalMapper->RequestStop();
             DBG("Reset","Stopping Local Mapping...");
+            int retries = 0;
             while(!mpLocalMapper->isStopped())
                 usleep(1000);
+                retries++;
+                if (retries > 20){
+                    throw runtime_error("Max retries exceeded. Considering the program to be stalled.");
+                }
             DBG("Reset","Local Mapping stopped");
         }
 

@@ -48,7 +48,7 @@ _run() {
 # Dump a bunch of useful /proc info
 _dump_proc() {
   local pid="$1"
-  cp "/proc/$pid/maps"        "$OUTDIR/proc.${pid}.maps"        2>/dev/null || true
+  #cp "/proc/$pid/maps"        "$OUTDIR/proc.${pid}.maps"        2>/dev/null || true
   cp "/proc/$pid/status"      "$OUTDIR/proc.${pid}.status"      2>/dev/null || true
   cp "/proc/$pid/sched"       "$OUTDIR/proc.${pid}.sched"       2>/dev/null || true
   cp "/proc/$pid/stack"       "$OUTDIR/proc.${pid}.kstack"      2>/dev/null || true

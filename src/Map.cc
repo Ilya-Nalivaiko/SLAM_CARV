@@ -25,6 +25,7 @@
 
 #include<mutex>
 #include <thread>
+#include <chrono>
 
 namespace ORB_SLAM2
 {
@@ -56,7 +57,24 @@ void Map::AddMapPoint(MapPoint *pMP)
 
 void Map::EraseMapPoint(MapPoint *pMP)
 {
-    unique_lock<mutex> lock(mMutexMap);
+    std::unique_lock<std::mutex> lock(mMutexMap, std::defer_lock);
+
+    // ultra-short, polite spin with backoff hooks
+    for (int tries = 0; !lock.try_lock(); ++tries)
+    {
+        // very short wait — tune as needed
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
+
+        // (optional) after some spins, yield to scheduler
+        if ((tries & 0x3F) == 0) std::this_thread::yield();
+
+        // (optional) breadcrumb every ~1s (50 µs * 20k ~= 1s)
+        if (tries == 20000) {
+            // fprintf(stderr, "[Map] mMutexMap contended for ~1s in %s:%d\n", __FILE__, __LINE__);
+            tries = 0; // keep waiting; change to 'break' if you prefer to bail
+        }
+    }
+
     // 1) Erase from the main set of live points
     mspMapPoints.erase(pMP);
 
