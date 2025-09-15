@@ -801,18 +801,17 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
 
     void Tracking::CheckReplacedInLastFrame()
     {
-        for(int i =0; i<mLastFrame.N; i++)
+        // Block MapPoint destruction while we walk last-frame pointers.
+        Map::ReadGuard rg(mpMap);
+
+        for (int i = 0; i < mLastFrame.N; i++)
         {
             MapPoint* pMP = mLastFrame.mvpMapPoints[i];
+            if (!pMP) continue;
 
-            if(pMP)
-            {
-                MapPoint* pRep = pMP->GetReplaced();
-                if(pRep)
-                {
-                    mLastFrame.mvpMapPoints[i] = pRep;
-                }
-            }
+            MapPoint* pRep = pMP->GetReplaced();
+            if (pRep)
+                mLastFrame.mvpMapPoints[i] = pRep;
         }
     }
 
@@ -1305,27 +1304,53 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
 
     void Tracking::UpdateLocalPoints()
     {
-        
+        // Prevent LocalMapping / CollectTrash from deleting or reshaping containers
+        // while we enumerate local keyframes and map points (TSan hit at 1321).
         Map::ReadGuard rg(mpMap);
-        mvpLocalMapPoints.clear();
 
-        for(vector<KeyFrame*>::const_iterator itKF=mvpLocalKeyFrames.begin(), itEndKF=mvpLocalKeyFrames.end(); itKF!=itEndKF; itKF++)
+        // 1) Build the unique set of candidate local points from local keyframes.
+        std::set<MapPoint*> spLocalPoints;
+        spLocalPoints.clear();
+
+        for (size_t i = 0; i < mvpLocalKeyFrames.size(); ++i)
         {
-            KeyFrame* pKF = *itKF;
-            const vector<MapPoint*> vpMPs = pKF->GetMapPointMatches();
+            KeyFrame* pKF = mvpLocalKeyFrames[i];
+            if (!pKF) continue;
 
-            for(vector<MapPoint*>::const_iterator itMP=vpMPs.begin(), itEndMP=vpMPs.end(); itMP!=itEndMP; itMP++)
+            // Get the KF's point matches (copy out so we don't hold any KF lock long).
+            const std::vector<MapPoint*> vMPs = pKF->GetMapPointMatches();
+            for (MapPoint* pMP : vMPs)
             {
-                MapPoint* pMP = *itMP;
-                if(!pMP)
-                    continue;
-                if(pMP->mnTrackReferenceForFrame==mCurrentFrame.mnId)
-                    continue;
-                if(!pMP->isBad())
-                {
-                    mvpLocalMapPoints.push_back(pMP);
-                    pMP->mnTrackReferenceForFrame=mCurrentFrame.mnId;
-                }
+                if (!pMP) continue;
+                if (pMP->isBad()) continue;
+                spLocalPoints.insert(pMP);
+            }
+        }
+
+        // 2) Snapshot into mvpLocalMapPoints while still under the read guard.
+        mvpLocalMapPoints.clear();
+        mvpLocalMapPoints.reserve(spLocalPoints.size());
+        for (MapPoint* pMP : spLocalPoints)
+        {
+            mvpLocalMapPoints.push_back(pMP);
+        }
+
+        // 3) Prepare for projection: pin each point briefly while touching its fields.
+        //    (Pin prevents per-object destruction while we mark/check visibility.)
+        for (MapPoint* pMP : mvpLocalMapPoints)
+        {
+            if (!pMP) continue;
+
+            MapPoint::Pin pin(pMP); // lifetime guard against concurrent CollectTrash()
+            if (pMP->isBad()) continue;
+
+            pMP->mnTrackReferenceForFrame = mCurrentFrame.mnId;
+            pMP->mbTrackInView = false;
+
+            // isInFrustum internally reads pose/normal/scale; keep Pin alive for that.
+            if (mCurrentFrame.isInFrustum(pMP, 0.5f))
+            {
+                pMP->mbTrackInView = true;
             }
         }
     }

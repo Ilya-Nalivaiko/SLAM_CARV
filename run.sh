@@ -21,7 +21,7 @@ exec setarch "$(uname -m)" -R \
     192.168.1.133 8080 \
     192.168.1.133 5555 \
     camera/image_raw \
-    0
+    1
 
 # 1 = use viewer
 # 0 = headless

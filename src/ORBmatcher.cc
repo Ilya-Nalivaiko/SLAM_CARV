@@ -51,10 +51,14 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
     for(size_t iMP=0; iMP<vpMapPoints.size(); iMP++)
     {
         MapPoint* pMP = vpMapPoints[iMP];
-        if(!pMP->mbTrackInView)
+
+        // Lifetime guard: make sure the point can’t be freed mid-iteration
+        MapPoint::Pin pin(pMP);
+
+        if (!pMP->mbTrackInView)
             continue;
 
-        if(pMP->isBad())
+        if (pMP->isBad())
             continue;
 
         const int &nPredictedLevel = pMP->mnTrackScaleLevel;

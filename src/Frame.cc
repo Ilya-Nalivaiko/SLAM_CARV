@@ -270,8 +270,13 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
 {
     pMP->mbTrackInView = false;
 
+    // Lifetime guard: prevent deletion while we read pose/tracking fields
+    MapPoint::Pin guard(pMP);
+
     // 3D in absolute coordinates
-    cv::Mat P = pMP->GetWorldPos(); 
+    cv::Mat P = pMP->GetWorldPos();
+    if (P.empty())
+        return false;
 
     // 3D in camera coordinates
     const cv::Mat Pc = mRcw*P+mtcw;
