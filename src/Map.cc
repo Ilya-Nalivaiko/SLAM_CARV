@@ -112,62 +112,75 @@ void Map::SnapshotMapPoints(std::vector<cv::Vec3f>& nonRefOut,
     nonRefOut.clear();
     refOut.clear();
 
-    // Block frees while we snapshot
+    // Hold the update lock to block frees while we snapshot and materialize outputs.
+    // (Writers should take this as unique; readers like us use shared.)
     std::shared_lock<std::shared_mutex> lkUpdate(mMutexMapUpdate);
 
-    // Copy containers under the map mutex, then release it
+    // snapshot containers under the map mutex, then release it
     std::vector<MapPoint*> vpMPs;
     std::vector<MapPoint*> vpRef;
     {
         std::unique_lock<std::mutex> lk(mMutexMap);
-        vpMPs.reserve(mspMapPoints.size());
-        for (MapPoint* pMP : mspMapPoints) {
-            if (pMP && mspMapPoints.count(pMP)) //guard against stale reference points
-                vpMPs.push_back(pMP);
-        };
-        vpRef = mvpReferenceMapPoints; // may be a subset of vpMPs
-    }
 
-    // Build a set for ref filtering
+        vpMPs.reserve(mspMapPoints.size());
+        for (MapPoint* pMP : mspMapPoints)
+        {
+            // mspMapPoints is the authoritative set; just copy pointers.
+            if (pMP) vpMPs.push_back(pMP);
+        }
+
+        // Reference set is a subset/cached list provided by the map.
+        vpRef = mvpReferenceMapPoints;
+    } // <-- mMutexMap released here; do NOT reacquire it below
+
+    // Build sets for fast membership checks without touching map locks again.
+    std::unordered_set<MapPoint*> allSet(vpMPs.begin(), vpMPs.end());
     std::unordered_set<MapPoint*> refSet(vpRef.begin(), vpRef.end());
+
     nonRefOut.reserve(vpMPs.size());
     refOut.reserve(vpRef.size());
 
-    // Snapshot non-reference points
+    // ---- Phase 2: emit non-reference points (no map locks inside this loop) ----
     for (MapPoint* mp : vpMPs)
     {
         if (!mp) continue;
-        MapPoint::Pin guard(mp);  // NEW: pins lifetime
 
-        // Feature lock read section: guards lifetime-sensitive flags
+        // Keep the MapPoint alive while we read its state.
+        MapPoint::Pin guard(mp);
+
+        // Guard feature-side flags/state; do NOT take the map mutex here.
         std::shared_lock<std::shared_mutex> lkFeat(mp->mMutexFeatures);
-        if (mp->isBad()) continue;                 // don't include bad points
-        if (refSet.find(mp) != refSet.end()) continue; // skip refs in nonRef list
 
-        // Pose read (GetWorldPos locks internally)
+        // Skip bad points and those that belong to the reference set.
+        if (mp->isBad()) continue;
+        if (refSet.find(mp) != refSet.end()) continue;
+
+        // Pose read (locks mp->mMutexPos internally).
         const cv::Mat P = mp->GetWorldPos();
         if (P.empty() || P.rows < 3) continue;
 
         nonRefOut.emplace_back(P.at<float>(0), P.at<float>(1), P.at<float>(2));
     }
 
-    // Snapshot reference points
+    // ---- Phase 3: emit reference points (no map locks inside this loop) ----
     for (MapPoint* mp : vpRef)
     {
         if (!mp) continue;
-        MapPoint::Pin guard(mp);  // NEW: pins lifetime
 
+        // Optional: ensure this ref is still in the main set using our snapshot.
+        if (allSet.find(mp) == allSet.end()) continue;
+
+        MapPoint::Pin guard(mp);
         std::shared_lock<std::shared_mutex> lkFeat(mp->mMutexFeatures);
-
-        std::unique_lock<std::mutex> lk(mMutexMap);
-        if (!mspMapPoints.count(mp) || mp->isBad()) continue;
+        if (mp->isBad()) continue;
 
         const cv::Mat P = mp->GetWorldPos();
         if (P.empty() || P.rows < 3) continue;
 
         refOut.emplace_back(P.at<float>(0), P.at<float>(1), P.at<float>(2));
     }
-    // lkUpdate released here; we only return POD
+
+    // lkUpdate released here; we return only POD data (Vec3f positions).
 }
 
 std::vector<MapPoint*> Map::GetAllMapPoints()
@@ -215,36 +228,48 @@ long unsigned int Map::GetMaxKFid()
     return mnMaxKFid;
 }
 
-void Map::clear()
-{
-    // 1) Block tracker/mapper updates, then take the map container lock.
+void Map::clear(){
+ 
+    // 1) Block tracker/mapper updates for the whole reset.
+    std::unique_lock<std::shared_mutex> lkUpdate(mMutexMapUpdate);
+
+    // 2) Snapshot pointers under the map mutex, then release it before SetBadFlag().
+    std::vector<MapPoint*> points;
+    std::vector<KeyFrame*> keyframes;
     {
-        std::unique_lock<std::shared_mutex> lkUpdate(mMutexMapUpdate);
         std::unique_lock<std::mutex> lk(mMutexMap);
-
-        // 2) Do NOT delete MapPoints here. Mark them bad; deletion is deferred.
-        //    This avoids racing with readers that still hold cv::Mat headers
-        for (MapPoint* pMP : mspMapPoints)
-        {
-            if (pMP) pMP->SetBadFlag();  // queues into mTrash via DeferErase()
+        points.reserve(mspMapPoints.size());
+        for (auto* p : mspMapPoints) {
+            if (p) points.push_back(p);
         }
-
-        // 3) With points detached from KFs, it’s safe to delete KeyFrames under the lock.
-        for (KeyFrame* pKF : mspKeyFrames)
-        {
-            delete pKF;
+        keyframes.reserve(mspKeyFrames.size());
+        for (auto* k : mspKeyFrames) {
+            if (k) keyframes.push_back(k);
         }
+    } // <-- mMutexMap released here. Important: avoid re-lock via SetBadFlag()->DeferErase()->EraseMapPoint().
 
+    // 3) Detach map points without holding mMutexMap to prevent self-deadlock.
+    //    SetBadFlag() will internally call DeferErase(), which takes mMutexMap.
+    for (MapPoint* pMP : points) {
+        if (pMP) pMP->SetBadFlag();
+    }
+
+    // 4) Now it is safe to delete keyframes (observations already removed by SetBadFlag()).
+    for (KeyFrame* pKF : keyframes) {
+        delete pKF;
+    }
+
+    // 5) Clear containers and indices under the map mutex.
+    {
+        std::unique_lock<std::mutex> lk(mMutexMap);
         mspMapPoints.clear();
         mspKeyFrames.clear();
         mnMaxKFid = 0;
         mvpReferenceMapPoints.clear();
         mvpKeyFrameOrigins.clear();
-        // locks released at scope end
     }
 
-    // 4) Actually free MapPoints behind a barrier on the update mutex.
-    //    This prevents races with Tracking still holding cv::Mat headers.
+    // 6) Finally free MapPoints when no one can still hold stale refs.
     CollectTrash();
 }
 
