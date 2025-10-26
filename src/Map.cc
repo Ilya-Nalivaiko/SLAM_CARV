@@ -270,7 +270,7 @@ void Map::clear(){
     }
 
     // 6) Finally free MapPoints when no one can still hold stale refs.
-    CollectTrash();
+    CollectTrash_NoLock();
 }
 
 void Map::DeferErase(MapPoint* pMP)
@@ -287,7 +287,11 @@ void Map::CollectTrash()
 {
     // Stop the world for Tracking while we actually free memory.
     std::unique_lock<std::shared_mutex> lkUpdate(mMutexMapUpdate);
+    CollectTrash_NoLock();
+}
 
+void Map::CollectTrash_NoLock()
+{
     std::list<MapPoint*> to_delete;
     {
         std::lock_guard<std::mutex> lk(mMutexTrash);

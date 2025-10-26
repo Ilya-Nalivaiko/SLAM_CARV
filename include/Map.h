@@ -52,6 +52,7 @@ namespace ORB_SLAM2 {
         // SAFETY: two‑phase deletion of MapPoints
         void DeferErase(MapPoint* pMP);
         void CollectTrash();
+        void CollectTrash_NoLock();
 
         Map();
 

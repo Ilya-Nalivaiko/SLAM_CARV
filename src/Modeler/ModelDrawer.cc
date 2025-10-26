@@ -16,7 +16,7 @@ namespace ORB_SLAM2
     void ModelDrawer::DrawModel(bool bRGB)
     {
         // select 1 KF (last)
-        int numKFs = 1;
+        int numKFs = 3;
         std::vector<std::pair<cv::Mat,TextureFrame>> imAndTexFrame = mpModeler->GetTextures(numKFs);
 
         if (imAndTexFrame.size() >= static_cast<size_t>(numKFs)) {
