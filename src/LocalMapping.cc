@@ -476,7 +476,10 @@ namespace ORB_SLAM2
                 pMP->UpdateNormalAndDepth();
 
                 // Add map point to lists AFTER its initialized
-                mpMap->AddMapPoint(pMP);
+                {
+                    std::unique_lock<std::shared_mutex> lk(mpMap->mMutexMapUpdate);
+                    mpMap->AddMapPoint(pMP);
+                }
                 mpCurrentKeyFrame->AddMapPoint(pMP,idx1);
                 pKF2->AddMapPoint(pMP,idx2);
                 mlpRecentAddedMapPoints.push_back(pMP);

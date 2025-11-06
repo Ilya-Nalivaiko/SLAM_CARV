@@ -585,7 +585,10 @@ namespace ORB_SLAM2
                     pNewMP->UpdateNormalAndDepth();
                     pNewMP->AddObservation(pKFini,i);
                     pKFini->AddMapPoint(pNewMP,i);
-                    mpMap->AddMapPoint(pNewMP);
+                    {
+                        std::unique_lock<std::shared_mutex> lk(mpMap->mMutexMapUpdate);
+                        mpMap->AddMapPoint(pNewMP);
+                    }
 
                     if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =pNewMP;
                 }
@@ -732,7 +735,10 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
             mCurrentFrame.mvbOutlier[mvIniMatches[i]] = false;
 
             //Add to Map
-            mpMap->AddMapPoint(pMP);
+            {
+                std::unique_lock<std::shared_mutex> lk(mpMap->mMutexMapUpdate);
+                mpMap->AddMapPoint(pMP);
+            }
         }
 
         // Update Connections
@@ -1214,7 +1220,10 @@ for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
                         pNewMP->UpdateNormalAndDepth();
                         pNewMP->AddObservation(pKF,i);
                         pKF->AddMapPoint(pNewMP,i);
-                        mpMap->AddMapPoint(pNewMP);
+                        {
+                            std::unique_lock<std::shared_mutex> lk(mpMap->mMutexMapUpdate);
+                            mpMap->AddMapPoint(pNewMP);
+                        }
 
                         if((i)>=0 && (i)<mCurrentFrame.N) mCurrentFrame.mvpMapPoints[i] =pNewMP;
                         nPoints++;

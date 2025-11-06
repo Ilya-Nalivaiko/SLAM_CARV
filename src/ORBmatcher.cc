@@ -51,9 +51,10 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
     for(size_t iMP=0; iMP<vpMapPoints.size(); iMP++)
     {
         MapPoint* pMP = vpMapPoints[iMP];
+        if(!pMP) continue;
 
         // Lifetime guard: make sure the point can’t be freed mid-iteration
-        MapPoint::Pin pin(pMP);
+        MapPoint::Pin guard(pMP);
 
         if (!pMP->mbTrackInView)
             continue;
@@ -200,6 +201,9 @@ int ORBmatcher::SearchByBoW(KeyFrame* pKF,Frame &F, vector<MapPoint*> &vpMapPoin
 
                 MapPoint* pMP = vpMapPointsKF[realIdxKF];
 
+                // Lifetime guard (we’ll read descriptor/bad flag)
+                MapPoint::Pin guard(pMP);
+
                 if(!pMP || pMP->isBad()) continue;     
 
                 if (pKF->mDescriptors.empty()) {
@@ -335,6 +339,11 @@ int ORBmatcher::SearchByProjection(KeyFrame* pKF, cv::Mat Scw, const vector<MapP
     for(int iMP=0, iendMP=vpPoints.size(); iMP<iendMP; iMP++)
     {
         MapPoint* pMP = vpPoints[iMP];
+
+        if(!pMP) continue;
+
+        // Lifetime guard
+        MapPoint::Pin guard(pMP);
 
         // Discard Bad MapPoints and already found
         if(pMP->isBad() || spAlreadyFound.count(pMP))
@@ -581,6 +590,10 @@ int ORBmatcher::SearchByBoW(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
                 MapPoint* pMP1 = vpMapPoints1[idx1];
                 if(!pMP1)
                     continue;
+
+                // Lifetime guard
+                MapPoint::Pin guard1(pMP1);
+
                 if(pMP1->isBad())
                     continue;
 
@@ -598,6 +611,9 @@ int ORBmatcher::SearchByBoW(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
 
                     if(vbMatched2[idx2] || !pMP2)
                         continue;
+
+                    // Lifetime guard
+                    MapPoint::Pin guard2(pMP2);
 
                     if(pMP2->isBad())
                         continue;
@@ -869,6 +885,9 @@ int ORBmatcher::Fuse(KeyFrame *pKF, const vector<MapPoint *> &vpMapPoints, const
         if(!pMP)
             continue;
 
+        // Lifetime guard across isBad/GetWorldPos/GetNormal/PredictScale/Replace
+        MapPoint::Pin guard(pMP);
+
         if(pMP->isBad() || pMP->IsInKeyFrame(pKF))
             continue;
 
@@ -1025,6 +1044,10 @@ int ORBmatcher::Fuse(KeyFrame *pKF, cv::Mat Scw, const vector<MapPoint *> &vpPoi
     for(int iMP=0; iMP<nPoints; iMP++)
     {
         MapPoint* pMP = vpPoints[iMP];
+        if(!pMP) continue;
+
+        // Lifetime guard
+        MapPoint::Pin guard(pMP);
 
         // Discard Bad MapPoints and already found
         if(pMP->isBad() || spAlreadyFound.count(pMP))
@@ -1177,6 +1200,9 @@ int ORBmatcher::SearchBySim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint*> &
         if(!pMP || vbAlreadyMatched1[i1])
             continue;
 
+        // Lifetime guard
+        MapPoint::Pin guard1(pMP);
+
         if(pMP->isBad())
             continue;
 
@@ -1256,6 +1282,9 @@ int ORBmatcher::SearchBySim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint*> &
 
         if(!pMP || vbAlreadyMatched2[i2])
             continue;
+        
+        // Lifetime guard
+        MapPoint::Pin guard2(pMP);
 
         if(pMP->isBad())
             continue;
@@ -1382,6 +1411,7 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, 
 
         if(pMP)
         {
+            MapPoint::Pin guard(pMP);
             if(!LastFrame.mvbOutlier[i])
             {
                 // Project
@@ -1524,6 +1554,7 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, KeyFrame *pKF, const set
 
         if(pMP)
         {
+            MapPoint::Pin guard(pMP);
             if(!pMP->isBad() && !sAlreadyFound.count(pMP))
             {
                 //Project
