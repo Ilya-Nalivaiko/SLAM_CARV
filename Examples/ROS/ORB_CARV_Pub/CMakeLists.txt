@@ -92,6 +92,12 @@ if(COMMAND target_compile_features)
   target_compile_features(Mono PUBLIC cxx_std_17)
 endif()
 
+# Node for RGB-D camera
+rosbuild_add_executable(RGBD
+  src/ros_rgbd.cc
+)
+target_link_libraries(RGBD ${LIBS})
+
 # ========== Disabled nodes ==========
 if(FALSE) # fake block comment
 

@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 
     if(argc != 7)
     {
-        cerr << endl << "Usage: rosrun ORB_SLAM2 RGBD path_to_vocabulary path_to_settings own_ip http_port unity_ip unity_zmq_port" << endl;
+        cerr << endl << "Usage: rosrun ORB_CARV_Pub RGBD path_to_vocabulary path_to_settings own_ip http_port unity_ip unity_zmq_port" << endl;
         ros::shutdown();
         return 1;
     }
@@ -64,7 +64,6 @@ int main(int argc, char **argv)
     int httpPort = std::stoi(argv[4]);
     std::string unityIp = argv[5];
     int zmqPort = std::stoi(argv[6]);
-    std::string imageTopic = argv[7];
 
     std::string ownAddress = ownIp + ":" + std::to_string(httpPort);
     std::string unityAddress = unityIp + ":" + std::to_string(zmqPort);
@@ -84,8 +83,11 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh;
 
-    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_raw", 1);
-    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "camera/depth_registered/image_raw", 1);
+    // message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_raw", 1);
+    // message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "camera/depth_registered/image_raw", 1);
+    // for realsense
+    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/color/image_raw", 1);
+    message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "camera/depth/image_rect_raw", 1);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), rgb_sub,depth_sub);
     sync.registerCallback(boost::bind(&ImageGrabber::GrabRGBD,&igb,_1,_2));

@@ -46,3 +46,17 @@ tools/*
 # camera catkin build
 camera/build
 camera/devel
+
+# wasent tracked before so im adding now just in case
+KeyFrameTrajectory.txt
+build.log
+cmake_configure.log
+compiler_invocations.txt
+cxx17_flags.txt
+opencv_includes.txt
+sfmtranscript_orbslam.txt
+test_mutex
+test_mutex.cpp
+test_opencv
+test_opencv.cpp
+warnings_in_build.txt
