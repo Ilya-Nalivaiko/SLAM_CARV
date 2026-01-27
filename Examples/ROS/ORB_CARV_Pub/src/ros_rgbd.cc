@@ -34,6 +34,8 @@
 
 #include"../../../include/System.h"
 
+#include "../../../include/NetworkIntegration/HttpService.h"
+
 using namespace std;
 
 class ImageGrabber
@@ -51,15 +53,32 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "RGBD");
     ros::start();
 
-    if(argc != 3)
+    if(argc != 7)
     {
-        cerr << endl << "Usage: rosrun ORB_SLAM2 RGBD path_to_vocabulary path_to_settings" << endl;        
+        cerr << endl << "Usage: rosrun ORB_SLAM2 RGBD path_to_vocabulary path_to_settings own_ip http_port unity_ip unity_zmq_port" << endl;
         ros::shutdown();
         return 1;
-    }    
+    }
+    
+    std::string ownIp = argv[3];
+    int httpPort = std::stoi(argv[4]);
+    std::string unityIp = argv[5];
+    int zmqPort = std::stoi(argv[6]);
+    std::string imageTopic = argv[7];
+
+    std::string ownAddress = ownIp + ":" + std::to_string(httpPort);
+    std::string unityAddress = unityIp + ":" + std::to_string(zmqPort);
+
+    // Create ChunkCache and HTTP Server
+    ChunkCache cache;
+    HttpService server(httpPort, cache);
+    server.start();
+
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::RGBD,true);
+
+    SLAM.SetNetworkingInfo(ownAddress, unityAddress, &cache);
 
     ImageGrabber igb(&SLAM);
 
@@ -75,6 +94,8 @@ int main(int argc, char **argv)
 
     // Stop all threads
     SLAM.Shutdown();
+    
+    server.stop();
 
     // Save camera trajectory
     SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");

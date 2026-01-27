@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  slam-carv:
+    image: islamaali/slam_carv-docker:v1.0
+    container_name: slam_carv_container
+    build:
+      context: .
+      dockerfile: Docker/Dockerfile
+    privileged: true 
+    ports:
+      - "5901:5901"
+      - "8080:8080"
+    environment:
+      - DISPLAY=:1
+      - QT_X11_NO_MITSHM=1
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    devices:
+      - /dev:/dev
+    volumes:
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 100m
+          mode: 1777 # Standard permissions for /tmp
+      - type: tmpfs
+        target: /root/.vnc
+      - ../SLAM_CARV:/root/orbslam3/SLAM_CARV
+
+    command: bash
+    tty: true
+    stdin_open: true

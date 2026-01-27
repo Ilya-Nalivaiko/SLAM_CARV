@@ -90,11 +90,12 @@ ENV ROS_DISTRO=noetic
 # Initialize rosdep
 RUN apt-get update && apt-get install -y python3-rosdep && rosdep init || true && rosdep update
 
-# usb_cam package
-RUN apt-get update && apt-get install -y ros-noetic-usb-cam
-
-# vision_opencv (cv_bridge, image_geometry, etc.) packaged
-RUN apt-get update && apt-get install -y ros-noetic-vision-opencv
+# ros packages
+RUN apt-get update && apt-get install -y \
+    ros-noetic-usb-cam \
+    ros-noetic-vision-opencv \
+    ros-noetic-libg2o \
+    ros-noetic-realsense2-camera
 
 # ------------------------------------------------------------------------------------------
 # [5] Install SLAM CARV dependencies
@@ -104,7 +105,6 @@ RUN apt-get update && apt-get install -y \
     libopenblas-dev \
     libcgal-dev \
     libcgal-qt5-dev \
-    ros-noetic-libg2o \
     libzmq3-dev
 
 # -----------------------------------
@@ -123,13 +123,12 @@ RUN cd /root/orbslam3/SLAM_CARV && \
 	rm -rf build && \
     chmod +x build.sh && \
     ./build.sh && \
-    chmod +x /root/orbslam3/SLAM_CARV/run.sh
+    chmod +x /root/orbslam3/SLAM_CARV/usb_run.sh && \
+    chmod +x /root/orbslam3/SLAM_CARV/realsense_run.sh
 
 ENV LD_LIBRARY_PATH=/root/orbslam3/SLAM_CARV/lib
 
-RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh
-
-
+RUN chmod +x /root/orbslam3/SLAM_CARV/usb_video.sh /root/orbslam3/SLAM_CARV/realsense_video.sh /root/orbslam3/SLAM_CARV/droidcam_video.sh
 
 RUN echo "[Dockerfile Info] Setting up ROS packages ......"
 
@@ -175,5 +174,11 @@ RUN chmod +x /opt/entrypoint.sh
 
 # reduce image size
 RUN rm -rf /var/lib/apt/lists/*
+
+# sergey nvim stuff :)
+RUN git clone https://github.com/sergey-khl/bear_ide.git /root/orbslam3/bear_ide \
+    && cd /root/orbslam3/bear_ide \
+    && ./install.sh
+
 
 ENTRYPOINT /opt/entrypoint.sh
